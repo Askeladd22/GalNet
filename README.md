@@ -1,6 +1,6 @@
-## Cos'è GalNet 2.0
+## Cos'è GalNet
 
-GalNet 2.0 è l'evoluzione di `GalNet` da semplice sistema di notizie dinamiche a vera piattaforma informativa integrata nell'universo di `X4`.
+GalNet è l'evoluzione di `GalNet` da semplice sistema di notizie dinamiche a vera piattaforma informativa integrata nell'universo di `X4`.
 
 L'obiettivo non è soltanto aumentare il numero dei messaggi o la varietà delle notifiche, ma costruire un sistema capace di raccontare, organizzare e rendere consultabile la vita politica, militare, economica e storica della galassia. GalNet 2.0 deve diventare il punto di riferimento interno al gioco per leggere l'universo di `X4` come un mondo vivo, stratificato e in continuo movimento.
 
@@ -14,13 +14,13 @@ In questa visione, la mod unisce in un unico ambiente:
 
 ## Identità del progetto
 
-GalNet 2.0 non deve apparire come un doppione del contenuto vanilla, né come un semplice raccoglitore di testi. Deve avere una propria identità riconoscibile, con un taglio giornalistico-documentale coerente con l'universo di gioco.
+GalNet non deve apparire come un doppione del contenuto vanilla, né come un semplice raccoglitore di testi. Deve avere una propria identità riconoscibile, con un taglio giornalistico-documentale coerente con l'universo di gioco.
 
 L'idea è quella di una vera rete informativa galattica: non solo una fonte di breaking news, ma anche uno strumento editoriale capace di conservare memoria, offrire contesto, collegare eventi e restituire al giocatore una lettura più ampia del presente e del passato dell'universo di `X4`.
 
 ## Struttura generale
 
-GalNet 2.0 è pensato come un ingresso unico all'interno di `Informazioni Giocatore`, nella colonna laterale sinistra.
+GalNet è pensato come un ingresso unico all'interno di `Informazioni Giocatore`, nella colonna laterale sinistra.
 
 Una volta aperto, il pannello principale di `GalNet` è organizzato attraverso una barra orizzontale con cinque tab:
 
@@ -66,6 +66,6 @@ La struttura ideale comprende una distinzione tra epoca pre-`X4`, `Foundations`,
 
 ## Obiettivo finale
 
-GalNet 2.0 deve diventare un vero sistema informativo dell'universo di `X4`: non soltanto un generatore di messaggi, ma uno strumento capace di unire attualità, memoria, interpretazione e contesto.
+GalNet deve diventare un vero sistema informativo dell'universo di `X4`: non soltanto un generatore di messaggi, ma uno strumento capace di unire attualità, memoria, interpretazione e contesto.
 
 Il suo valore non starà nel numero di notifiche prodotte, ma nella capacità di dare forma a una visione coerente della galassia, in cui ogni evento possa essere letto come notizia, archiviato come documento, collegato a un luogo, ricondotto a una storia e compreso dentro un quadro più ampio.
