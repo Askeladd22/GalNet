@@ -1,0 +1,102 @@
+        <!-- Evento fine schermaglia: ritiro forze se nessuna schermaglia per 10 minuti -->
+        <cue name="Trigger_Skirmish_Ceasefire" instantiate="true">
+            <conditions>
+                <check_value value="$MinorSkirmishLosses" exact="0" />
+                <check_time_since name="$MinorSkirmishTimer" min="600" /> <!-- 10 minuti senza schermaglie -->
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="GalNet" event="minor_skirmish_ceasefire">
+                    <param name="sector" value="$MinorSkirmishSector" />
+                    <param name="factions" value="$MinorSkirmishFactions" />
+                </signal_cue_instantly>
+            </actions>
+        </cue>
+
+        <!-- Notifica escalation: da schermaglia a battaglia maggiore -->
+        <cue name="Trigger_Skirmish_Escalation" instantiate="true">
+            <conditions>
+                <check_value value="$MinorSkirmish" min="1" />
+                <check_value value="$SkirmishEscalationToBattle" min="1" />
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="GalNet" event="minor_skirmish_escalation">
+                    <param name="sector" value="$MinorSkirmishSector" />
+                    <param name="factions" value="$MinorSkirmishFactions" />
+                    <param name="type" value="$MinorSkirmishType" />
+                    <param name="escalation" value="battle" />
+                </signal_cue_instantly>
+                <set_value name="$SkirmishEscalationToBattle" exact="0" />
+            </actions>
+        </cue>
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="Minor_Skirmish_Monitor">
+    <!--
+        Sensore per:
+        - Schermaglie minori non-Xenon
+        - Scontri di frontiera
+        - Incidenti armati localizzati
+        Separato dalla guerra “normale” e dalle crisi Xenon
+        TODO: Implementare logica di monitoraggio e trigger eventi GalNet
+    -->
+    <variables>
+        <variable name="$MinorSkirmish" />
+        <variable name="$MinorSkirmishSector" />
+        <variable name="$MinorSkirmishFactions" />
+        <variable name="$MinorSkirmishType" />
+        <variable name="$MinorSkirmishLosses" />
+        <variable name="$MinorSkirmishCivilianImpact" />
+        <variable name="$MinorSkirmishLogisticsImpact" />
+        <variable name="$MinorSkirmishTimer" />
+    </variables>
+
+    <cues>
+        <cue name="Monitor_Minor_Skirmish" instantiate="true">
+            <conditions>
+                <check_value value="$MinorSkirmish" min="1" />
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="GalNet" event="minor_skirmish">
+                    <param name="sector" value="$MinorSkirmishSector" />
+                    <param name="factions" value="$MinorSkirmishFactions" />
+                    <param name="type" value="$MinorSkirmishType" />
+                    <param name="losses" value="$MinorSkirmishLosses" />
+                    <if value="$MinorSkirmishCivilianImpact" min="1">
+                        <param name="civilian_impact" value="$MinorSkirmishCivilianImpact" />
+                    </if>
+                    <if value="$MinorSkirmishLogisticsImpact" min="1">
+                        <param name="logistics_impact" value="$MinorSkirmishLogisticsImpact" />
+                    </if>
+                </signal_cue_instantly>
+                <set_value name="$MinorSkirmish" exact="0" />
+                <set_value name="$MinorSkirmishCivilianImpact" exact="0" />
+                <set_value name="$MinorSkirmishLogisticsImpact" exact="0" />
+            </actions>
+        </cue>
+
+        <!-- Accumulatore per cluster schermaglie in breve tempo -->
+        <cue name="Accumulate_Minor_Skirmish_Cluster" instantiate="true">
+            <conditions>
+                <check_value value="$MinorSkirmish" min="1" />
+            </conditions>
+            <actions>
+                <set_value name="$MinorSkirmishLosses" op="add" value="1" />
+                <set_time name="$MinorSkirmishTimer" />
+            </actions>
+        </cue>
+
+        <cue name="Trigger_Minor_Skirmish_Cluster_News" instantiate="true">
+            <conditions>
+                <check_value value="$MinorSkirmishLosses" min="3" />
+                <check_time_since name="$MinorSkirmishTimer" min="0" max="900" /> <!-- 15 minuti -->
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="GalNet" event="minor_skirmish_cluster">
+                    <param name="sector" value="$MinorSkirmishSector" />
+                    <param name="factions" value="$MinorSkirmishFactions" />
+                    <param name="losses" value="$MinorSkirmishLosses" />
+                </signal_cue_instantly>
+                <set_value name="$MinorSkirmishLosses" exact="0" />
+            </actions>
+        </cue>
+    </cues>
+</mdscript>

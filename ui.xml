@@ -1,0 +1,20 @@
+  <file name="ui/galnet_chronicles_store.lua" />
+  <file name="ui/galnet_chronicles_renderer.lua" />
+<?xml version="1.0" encoding="UTF-8"?>
+<addon name="galnet" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../ui/core/addon.xsd">
+  <environment type="menus">
+    <file name="ui/galnet_data.lua" />
+    <file name="ui/menu_playerinfo_galnet.lua" />
+    <file name="ui/galnet_playerinfo_hook.lua" />
+    <file name="ui/galnet_kuertee_adapter.lua" />
+    <file name="ui/galnet_news_store.lua" />
+    <file name="ui/galnet_feed_renderer.lua" />
+    <file name="ui/galnet_archive_store.lua" />
+    <file name="ui/galnet_archive_renderer.lua" />
+    <file name="ui/galnet_dossier_store.lua" />
+    <file name="ui/galnet_dossier_renderer.lua" />
+    <file name="ui/galnet_atlas_store.lua" />
+    <file name="ui/galnet_atlas_renderer.lua" />
+    <dependency name="kuertee_ui_extensions" />
+  </environment>
+</addon>

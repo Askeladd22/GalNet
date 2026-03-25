@@ -1,0 +1,213 @@
+        <!-- Variabili per impatto e multi-settore -->
+        <variables>
+            <variable name="$LogisticsLosses_Count" />
+            <variable name="$CivilianLosses_Count" />
+            <variable name="$LastBattleEndTime" />
+            <variable name="$RegionCrisis_Sectors" />
+            <variable name="$RegionCrisis_Faction" />
+            <variable name="$RegionCrisis_Count" />
+            <variable name="$RegionCrisis_Timer" />
+        </variables>
+
+        <!-- Accumulo impatto logistico/civile -->
+        <cue name="Accumulate_Impact_Losses" instantiate="true">
+            <conditions>
+                <check_value value="$ShipDestroyed" min="1" />
+            </conditions>
+            <actions>
+                <if value="$ShipDestroyedClass" equals="logistics">
+                    <set_value name="$LogisticsLosses_Count" op="add" value="1" />
+                </if>
+                <if value="$ShipDestroyedClass" equals="civilian">
+                    <set_value name="$CivilianLosses_Count" op="add" value="1" />
+                </if>
+            </actions>
+        </cue>
+
+        <!-- Evento fine battaglia (cessate il fuoco) -->
+        <cue name="Trigger_Battle_Ceasefire" instantiate="true">
+            <conditions>
+                <check_value value="$CapitalLosses_Count" exact="0" />
+                <check_time_since name="$CapitalLosses_Timer" min="900" /> <!-- 15 minuti senza perdite -->
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="GalNet" event="battle_ceasefire">
+                    <param name="sector" value="$CapitalLosses_Sector" />
+                    <param name="faction" value="$CapitalLosses_Faction" />
+                </signal_cue_instantly>
+                <set_time name="$LastBattleEndTime" />
+            </actions>
+        </cue>
+
+        <!-- Escalation multi-settore: crisi regionale -->
+        <cue name="Accumulate_Region_Crisis" instantiate="true">
+            <conditions>
+                <check_value value="$CapitalLosses_Count" min="2" />
+            </conditions>
+            <actions>
+                <!-- Se fazione uguale e settore adiacente, incrementa -->
+                <if value="$CapitalLosses_Faction" equals="$RegionCrisis_Faction">
+                    <set_value name="$RegionCrisis_Count" op="add" value="1" />
+                    <set_value name="$RegionCrisis_Sectors" op="concat" value="$CapitalLosses_Sector" sep="," />
+                </if>
+                <!-- Altrimenti resetta -->
+                <if value="$CapitalLosses_Faction" not_equals="$RegionCrisis_Faction">
+                    <set_value name="$RegionCrisis_Faction" exact="$CapitalLosses_Faction" />
+                    <set_value name="$RegionCrisis_Count" exact="1" />
+                    <set_value name="$RegionCrisis_Sectors" exact="$CapitalLosses_Sector" />
+                    <set_time name="$RegionCrisis_Timer" />
+                </if>
+            </actions>
+        </cue>
+
+        <cue name="Trigger_Region_Crisis_News" instantiate="true">
+            <conditions>
+                <check_value value="$RegionCrisis_Count" min="2" />
+                <check_time_since name="$RegionCrisis_Timer" min="0" max="1800" /> <!-- 30 minuti -->
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="GalNet" event="region_crisis">
+                    <param name="faction" value="$RegionCrisis_Faction" />
+                    <param name="sectors" value="$RegionCrisis_Sectors" />
+                    <param name="clusters" value="$RegionCrisis_Count" />
+                </signal_cue_instantly>
+                <set_value name="$RegionCrisis_Count" exact="0" />
+                <set_value name="$RegionCrisis_Sectors" exact="" />
+            </actions>
+        </cue>
+
+        <!-- Estensione: parametri impatto su notizie -->
+        <!-- Aggiungi a tutti i signal_cue_instantly principali: -->
+        <!--
+            <param name="logistics_impact" value="$LogisticsLosses_Count" />
+            <param name="civilian_impact" value="$CivilianLosses_Count" />
+        -->
+    <!-- Accumulatore perdite capitali per settore/fazione -->
+    <variables>
+        <variable name="$CapitalLosses_Sector" />
+        <variable name="$CapitalLosses_Faction" />
+        <variable name="$CapitalLosses_Count" />
+        <variable name="$CapitalLosses_Timer" />
+        <variable name="$StationLosses_Sector" />
+        <variable name="$StationLosses_Faction" />
+        <variable name="$StationLosses_Count" />
+    </variables>
+
+    <cue name="Accumulate_Capital_Losses" instantiate="true">
+        <conditions>
+            <check_value value="$ShipDestroyed" min="1" />
+            <check_value value="$ShipDestroyedClass" min="2" /> <!-- Solo L/XL -->
+        </conditions>
+        <actions>
+            <!-- Se settore/fazione uguali all'accumulatore, incrementa -->
+            <if value="$ShipDestroyedSector" equals="$CapitalLosses_Sector">
+                <if value="$ShipDestroyedFaction" equals="$CapitalLosses_Faction">
+                    <set_value name="$CapitalLosses_Count" op="add" value="1" />
+                </if>
+            </if>
+            <!-- Altrimenti resetta accumulatore per nuovo cluster -->
+            <if value="$ShipDestroyedSector" not_equals="$CapitalLosses_Sector">
+                <set_value name="$CapitalLosses_Sector" exact="$ShipDestroyedSector" />
+                <set_value name="$CapitalLosses_Faction" exact="$ShipDestroyedFaction" />
+                <set_value name="$CapitalLosses_Count" exact="1" />
+                <set_time name="$CapitalLosses_Timer" />
+            </if>
+            <if value="$ShipDestroyedFaction" not_equals="$CapitalLosses_Faction">
+                <set_value name="$CapitalLosses_Sector" exact="$ShipDestroyedSector" />
+                <set_value name="$CapitalLosses_Faction" exact="$ShipDestroyedFaction" />
+                <set_value name="$CapitalLosses_Count" exact="1" />
+                <set_time name="$CapitalLosses_Timer" />
+            </if>
+        </actions>
+    </cue>
+
+    <cue name="Trigger_Capital_Losses_News" instantiate="true">
+        <conditions>
+            <check_value value="$CapitalLosses_Count" min="2" />
+            <check_time_since name="$CapitalLosses_Timer" min="0" max="900" /> <!-- 15 minuti -->
+        </conditions>
+        <actions>
+            <signal_cue_instantly cue="GalNet" event="battle_cluster_major">
+                <param name="sector" value="$CapitalLosses_Sector" />
+                <param name="faction" value="$CapitalLosses_Faction" />
+                <param name="losses" value="$CapitalLosses_Count" />
+            </signal_cue_instantly>
+            <!-- Se 3+ capitali, escalation -->
+            <if value="$CapitalLosses_Count" min="3">
+                <signal_cue_instantly cue="GalNet" event="battle_cluster_escalation">
+                    <param name="sector" value="$CapitalLosses_Sector" />
+                    <param name="faction" value="$CapitalLosses_Faction" />
+                    <param name="losses" value="$CapitalLosses_Count" />
+                </signal_cue_instantly>
+            </if>
+            <set_value name="$CapitalLosses_Count" exact="0" />
+        </actions>
+    </cue>
+
+    <!-- Se cade anche una stazione, escalation strategica -->
+    <cue name="Trigger_Strategic_Loss_News" instantiate="true">
+        <conditions>
+            <check_value value="$CapitalLosses_Count" min="1" />
+            <check_value value="$StationDestroyed" min="1" />
+            <check_value value="$StationDestroyedSector" equals="$CapitalLosses_Sector" />
+            <check_value value="$StationDestroyedFaction" equals="$CapitalLosses_Faction" />
+            <check_time_since name="$CapitalLosses_Timer" min="0" max="900" />
+        </conditions>
+        <actions>
+            <signal_cue_instantly cue="GalNet" event="battle_cluster_strategic">
+                <param name="sector" value="$CapitalLosses_Sector" />
+                <param name="faction" value="$CapitalLosses_Faction" />
+                <param name="losses" value="$CapitalLosses_Count" />
+                <param name="station" value="$StationDestroyedName" />
+            </signal_cue_instantly>
+            <set_value name="$CapitalLosses_Count" exact="0" />
+        </actions>
+    </cue>
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="Battle_Losses_Monitor">
+    <!--
+        Sensore per:
+        - Distruzione nave L/XL
+        - Perdita ammiraglia
+        - Distruzione stazione difensiva/industriale
+        Emette eventi:
+        - ship_destroyed
+        - station_destroyed
+        Parametri: settore, fazione, nome nave/stazione
+        TODO: Implementare accumulatore per perdite capitali e trigger escalation
+    -->
+    <cues>
+        <cue name="Monitor_Ship_Destroyed" instantiate="true">
+            <conditions>
+                <check_value value="$ShipDestroyed" min="1" />
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="GalNet" event="ship_destroyed">
+                    <param name="sector" value="$ShipDestroyedSector" />
+                    <param name="faction" value="$ShipDestroyedFaction" />
+                    <param name="ship" value="$ShipDestroyedName" />
+                    <param name="class" value="$ShipDestroyedClass" />
+                    <if value="$ShipDestroyedFlagship" min="1">
+                        <param name="flagship" value="1" />
+                    </if>
+                </signal_cue_instantly>
+                <set_value name="$ShipDestroyed" exact="0" />
+                <set_value name="$ShipDestroyedFlagship" exact="0" />
+            </actions>
+        </cue>
+        <cue name="Monitor_Station_Destroyed" instantiate="true">
+            <conditions>
+                <check_value value="$StationDestroyed" min="1" />
+            </conditions>
+            <actions>
+                <signal_cue_instantly cue="GalNet" event="station_destroyed">
+                    <param name="sector" value="$StationDestroyedSector" />
+                    <param name="faction" value="$StationDestroyedFaction" />
+                    <param name="station" value="$StationDestroyedName" />
+                    <param name="type" value="$StationDestroyedType" />
+                </signal_cue_instantly>
+                <set_value name="$StationDestroyed" exact="0" />
+            </actions>
+        </cue>
+    </cues>
+</mdscript>
