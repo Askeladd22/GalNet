@@ -1,9 +1,0 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
-<diff>
-	<!-- Pirate dropping cover after hack to collect crates -->
-	<add sel="//set_object_hacked" pos="after">
-		<set_value name="$pirate_ship" exact="this.ship" />
-		<!--Fire a signal the GalNet pirate blown cover script is waiting for-->
-		<signal_objects object="player.galaxy" param="'EDN__plunder_blown_cover'" param2="$target" param3="$pirate_ship"/>
-	</add>
-</diff>
