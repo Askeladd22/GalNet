@@ -1,0 +1,10 @@
+^B:\STEAMLIBRARY\STEAMAPPS\COMMON\X4 FOUNDATIONS\EXTENSIONS\GNN\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SB:/SteamLibrary/steamapps/common/X4 Foundations/extensions/GNN" "-BB:/SteamLibrary/steamapps/common/X4 Foundations/extensions/GNN/build" --check-stamp-file "B:/SteamLibrary/steamapps/common/X4 Foundations/extensions/GNN/build/CMakeFiles/generate.stamp"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

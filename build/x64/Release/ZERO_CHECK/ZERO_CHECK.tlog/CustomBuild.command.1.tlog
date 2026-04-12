@@ -1,0 +1,10 @@
+^B:\STEAMLIBRARY\STEAMAPPS\COMMON\X4 FOUNDATIONS\EXTENSIONS\GNN\BUILD\CMAKEFILES\31D949421F6A75450F4E7316494D1AE6\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" "-SB:/SteamLibrary/steamapps/common/X4 Foundations/extensions/GNN" "-BB:/SteamLibrary/steamapps/common/X4 Foundations/extensions/GNN/build" --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file "B:/SteamLibrary/steamapps/common/X4 Foundations/extensions/GNN/build/x4native_gnn_core.slnx"
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

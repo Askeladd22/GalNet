@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="18.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="B:\SteamLibrary\steamapps\common\X4 Foundations\extensions\GNN\native\x4native_gnn_core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="B:\SteamLibrary\steamapps\common\X4 Foundations\extensions\GNN\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{AC94751E-7684-331E-B1F2-00015AA5830B}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

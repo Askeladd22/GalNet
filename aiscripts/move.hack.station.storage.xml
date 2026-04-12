@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<diff>
+	<!-- Il pirata perde la copertura dopo l'hack e raccoglie i container -->
+	<add sel="//set_object_hacked" pos="after">
+		<set_value name="$pirate_ship" exact="this.ship" />
+		<!-- Invia il segnale atteso dal cue del pirata scoperto -->
+		<signal_objects object="player.galaxy" param="'EDN__plunder_blown_cover'" param2="$target" param3="$pirate_ship"/>
+	</add>
+</diff>

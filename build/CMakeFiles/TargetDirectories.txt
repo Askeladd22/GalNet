@@ -1,0 +1,3 @@
+B:/SteamLibrary/steamapps/common/X4 Foundations/extensions/GNN/build/CMakeFiles/x4native_gnn_core.dir
+B:/SteamLibrary/steamapps/common/X4 Foundations/extensions/GNN/build/CMakeFiles/ALL_BUILD.dir
+B:/SteamLibrary/steamapps/common/X4 Foundations/extensions/GNN/build/CMakeFiles/ZERO_CHECK.dir

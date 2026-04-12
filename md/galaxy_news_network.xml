@@ -1,0 +1,1208 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<mdscript name="Event_driven_news" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+	<!-- Notizie di gioco generate da eventi per il logbook del giocatore -->
+	<!-- Schema dei log -->
+	<!-- Esempio di log: 2020-04-25 06:07:54 [EventKeyword] Event='Descrizione' EventAction='Azione' <altri campi> -->
+	<cues>
+		<!-- Feed GNN: rapido e quasi sempre corretto -->
+		<!-- Traccia i settori che cambiano proprietario -->
+		<cue name="Populate_Sectors">
+			<conditions>
+				<check_any>
+					<event_game_started/>
+					<event_game_loaded/>
+				</check_any>
+			</conditions>
+			<actions>
+				<set_value name="namespace.static.$GNNNewsState" exact="table[]"/>
+				<set_value name="namespace.static.$GNNNewsState.$Recent" exact="table[]"/>
+				<set_value name="namespace.static.$GNNNewsState.$LastByKey" exact="table[]"/>
+				<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
+				<do_if value="not namespace.static.$MarketFooterByKey?">
+					<set_value name="namespace.static.$MarketFooterByKey" exact="table[]"/>
+				</do_if>
+				<set_value name="$Ticker" exact="'\033#cyan_weak_glow#Galaxy News Network\033X'"/>
+				<set_value name="$Headline" exact="'Uplink GalNet attivo'"/>
+				<set_value name="$ShortBody" exact="'segnali di settore e flussi dati agganciati'"/>
+				<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+				<play_sound object="player.entity" sound="'notification_generic'"/>
+				<find_sector groupname="$Sectors" space="player.galaxy" multiple="true"/>
+			</actions>
+			<cues>
+				<cue name="SectorDetails_Update" instantiate="true">
+					<conditions>
+						<event_game_loaded/>
+					</conditions>
+					<actions>
+						<find_sector groupname="$Sectors" space="player.galaxy" multiple="true"/>
+					</actions>
+				</cue>
+				<!-- Cinque casi di cambio proprieta dei settori, incluso il giocatore.
+				1. La fazione perde il controllo: settore libero
+				2. Una fazione annette un settore libero
+				3. Gli Xenon occupano un settore libero
+				4. Gli Xenon prendono un settore a un'altra fazione
+				5. Una fazione prende un settore agli Xenon
+				-->
+				<cue name="New_Sector_Owner_Headline" instantiate="true">
+					<conditions>
+						<!-- Evento: l'oggetto cambia proprietario (object = oggetto, param = nuova fazione, param2 = fazione precedente) -->
+						<event_object_changed_owner group="$Sectors"/> 
+					</conditions>
+					<delay max="5min"/>
+					<actions>
+						<set_value name="$GameAge" exact="player.age"/>
+						<set_value name="$Body" exact="'Aggiornamento in corso.'"/>
+					<!-- Mostra le notizie sui cambi di settore anche senza conoscenza del settore; ritardo breve per bilanciamento -->
+						<!-- <do_if value="event.object.isknown and (event.param2 == faction.player or event.param2.hasrelation.friend.{faction.player} or event.param.hasrelation.friend.{faction.player})"> -->
+						<do_if value="event.param == faction.ownerless and event.param2 != faction.xenon">
+						<!-- La fazione perde il controllo di un settore -->
+							<!-- Recupera prima i manager delle fazioni -->
+							<set_value name="$Faction" exact="event.param2.name"/>
+							<set_value name="$ChangedSector" exact="event.object.knownname"/>
+							<set_value name="$Body" exact="'Fonti locali indicano che %1 ha perso il controllo del settore %2. I rappresentanti di %1, contattati sulla vicenda, hanno liquidato la notizia come propaganda speculativa diffusa da attori ostili'.[$Faction, $ChangedSector]"/>
+							<set_value name="$ShortBody" exact="'evacuazione civile'"/>
+							<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'" />
+							<set_value name="$Headline" exact="'%1 perde il settore %2'.[$Faction, $ChangedSector]" />
+						<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Yoyunis Tertasobas Zusilas IV. ' + $Body"/>
+							<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+							<play_sound object="player.entity" sound="'notification_generic'"/>
+							<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Territory]' + ' ' + 'GameAge=\'%1\' Event=\'TerritoryChange\' EventAction=\'Sector ownerless\' Sector=\'%2\' PreviousFaction=\'%3\' NewFaction=\'Ownerless\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $ChangedSector, $Faction]"/>
+						</do_if>
+						<do_elseif value="event.param2 == faction.ownerless and event.param != faction.xenon">
+						<!-- Una fazione prende un settore libero -->
+							<set_value name="$Faction" exact="event.param.name"/>
+							<set_value name="$ChangedSector" exact="event.object.knownname"/>
+							<set_value name="$Body" exact="'Secondo osservatori di settore, %1 ha annesso il settore %2, prima privo di proprietario. Le autorita sostengono che la mossa dovrebbe rassicurare i neutrali, mentre %1 investe in nuove iniziative economiche e nella sicurezza dell'area.'.[$Faction, $ChangedSector]"/>
+							<set_value name="$ShortBody" exact="'controlli rafforzati'"/>
+							<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'" />
+							<set_value name="$Headline" exact="'%1 annette il settore %2'.[$Faction, $ChangedSector]" />
+							<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Eron Alba. ' + $Body"/>
+							<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+							<play_sound object="player.entity" sound="'notification_generic'"/>
+							<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Territory]' + ' ' + 'GameAge=\'%1\' Event=\'TerritoryChange\' EventAction=\'Ownerless sector claimed\' Sector=\'%2\' PreviousFaction=\'Ownerless\' NewFaction=\'%3\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $ChangedSector, $Faction]"/>
+						</do_elseif>
+						<do_elseif value="event.param == faction.xenon and event.param2 == faction.ownerless">
+							<!-- Gli Xenon occupano un settore libero -->
+							<set_value name="$Faction" exact="event.param.name"/>
+							<set_value name="$ChangedSector" exact="event.object.knownname"/>
+							<set_value name="$Body" exact="'Fonti di varie fazioni riferiscono il divieto di tutto il traffico non militare nel settore %1. Una ricognizione non identificata segnala che i %2 hanno gia costruito numerose stazioni nell'area. Le difese locali sono in allerta e i governi vicini preparano evacuazioni.'.[$ChangedSector, $Faction]"/>
+							<set_value name="$ShortBody" exact="'rotte civili chiuse'"/>
+							<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'" />
+							<set_value name="$Headline" exact="'%1 avanza nel settore %2'.[$Faction, $ChangedSector]" />
+							<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Eron Alba. ' + $Body"/>
+							<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+							<play_sound object="player.entity" sound="'notification_generic'"/>
+							<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Territory]' + ' ' + 'GameAge=\'%1\' Event=\'TerritoryChange\' EventAction=\'Ownerless sector claimed\' Sector=\'%2\' PreviousFaction=\'Ownerless\' NewFaction=\'%3\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $ChangedSector, $Faction]"/>
+						</do_elseif>
+						<do_elseif value="event.param == faction.xenon">
+							<!-- Gli Xenon prendono un settore a un'altra fazione -->
+							<set_value name="$Faction" exact="event.param.name"/>
+							<set_value name="$OldFaction" exact="event.param2.name"/>
+							<set_value name="$ChangedSector" exact="event.object.knownname"/>
+							<set_value name="$Body" exact="'Dal fronte arriva notizia che %1 non riesce a contenere gli Xenon nel settore %2. I civili sono invitati a lasciare il sistema al piu presto, mentre la stazione colonia piu vicina si prepara ad assistere i rifugiati.'.[$OldFaction, $ChangedSector]"/>
+							<set_value name="$ShortBody" exact="'evacuazione raccomandata'"/>
+							<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'" />
+							<set_value name="$Headline" exact="'%1 terrorizza %2'.[$Faction, $ChangedSector]" />
+							<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Eron Alba. ' + $Body"/>
+							<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+							<play_sound object="player.entity" sound="'notification_generic'"/>
+							<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Territory]' + ' ' + 'GameAge=\'%1\' Event=\'TerritoryChange\' EventAction=\'Sector faction change\' Sector=\'%2\' PreviousFaction=\'%3\' NewFaction=\'%4\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $ChangedSector, $OldFaction, $Faction]"/>
+						</do_elseif>
+						<do_elseif value="event.param == faction.ownerless and event.param2 == faction.xenon">
+							<!-- Gli Xenon perdono il controllo di un settore -->
+							<set_value name="$OldFaction" exact="event.param2.name"/>
+							<set_value name="$ChangedSector" exact="event.object.knownname"/>
+							<set_value name="$Body" exact="'Fonti locali indicano che %1 ha perso il controllo del settore %2. Le pattuglie stanno verificando che le forze Xenon abbiano davvero lasciato la zona, mentre il traffico civile e invitato alla prudenza.'.[$OldFaction, $ChangedSector]"/>
+							<set_value name="$ShortBody" exact="'rotte civili riaperte'"/>
+							<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'" />
+							<set_value name="$Headline" exact="'%1 espulso da %2'.[$OldFaction, $ChangedSector]" />
+							<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Eron Alba. ' + $Body"/>
+							<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+							<play_sound object="player.entity" sound="'notification_generic'"/>
+							<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Territory]' + ' ' + 'GameAge=\'%1\' Event=\'TerritoryChange\' EventAction=\'Sector ownerless\' Sector=\'%2\' PreviousFaction=\'%3\' NewFaction=\'Ownerless\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $ChangedSector, $OldFaction]"/>
+						</do_elseif>
+						<do_elseif value="event.param2 == faction.xenon">
+							<!-- Una fazione prende un settore agli Xenon -->
+							<set_value name="$Faction" exact="event.param.name"/>
+							<set_value name="$ChangedSector" exact="event.object.knownname"/>
+							<set_value name="$OldFaction" exact="event.param2.name"/>
+							<set_value name="$Body" exact="'Dal fronte arrivano conferme: %1 ha liberato il settore %3 dagli Xenon. Le forze potranno riprendere le operazioni di bonifica dopo una breve pausa per riparazioni e riarmo.'.[$Faction, $OldFaction, $ChangedSector]"/>
+							<set_value name="$ShortBody" exact="'operazioni in ripresa'"/>
+							<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'" />
+							<set_value name="$Headline" exact="'%2 liberato da %3'.[$Faction, $ChangedSector, $OldFaction]" />
+							<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Eron Alba. ' + $Body"/>
+							<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+							<play_sound object="player.entity" sound="'notification_generic'"/>
+							<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Territory]' + ' ' + 'GameAge=\'%1\' Event=\'TerritoryChange\' EventAction=\'Sector faction change\' Sector=\'%2\' PreviousFaction=\'%3\' NewFaction=\'%4\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $ChangedSector, $OldFaction, $Faction]"/>
+						</do_elseif>
+						<do_else>
+						<!-- Una fazione conquista un settore alla fazione precedente -->
+							<set_value name="$Faction" exact="event.param.name"/>
+							<set_value name="$ChangedSector" exact="event.object.knownname"/>
+							<set_value name="$OldFaction" exact="event.param2.name"/>
+							<set_value name="$Body" exact="'Dal fronte giunge notizia che %1 ha costretto %2 a ritirarsi completamente dal settore %3. La flotta di %1 parla di una vittoria netta; fonti di %2 hanno scelto di non commentare.'.[$Faction, $OldFaction, $ChangedSector]"/>
+							<set_value name="$ShortBody" exact="'presenza militare rafforzata'"/>
+							<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'" />
+							<set_value name="$Headline" exact="'%1 conquista il settore %2 ai danni di %3'.[$Faction, $ChangedSector, $OldFaction]" />
+							<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Eron Alba. ' + $Body"/>
+							<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+							<play_sound object="player.entity" sound="'notification_generic'"/>
+							<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Territory]' + ' ' + 'GameAge=\'%1\' Event=\'TerritoryChange\' EventAction=\'Sector faction change\' Sector=\'%2\' PreviousFaction=\'%3\' NewFaction=\'%4\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $ChangedSector, $OldFaction, $Faction]"/>
+						</do_else>
+					</actions>
+				</cue>
+			</cues>
+		</cue>
+		<!-- Quando una fazione riceve un nuovo HQ, segnala dove si sposta e chi ne prende la guida -->
+		<cue name="New_HQ_Headline" instantiate="true">
+			<conditions>
+				<event_faction_headquarters_changed/>
+			</conditions>
+			<delay exact="5min"/> <!-- Ritardo per evitare la race condition tra cambio HQ e nuovo rappresentante -->
+			<actions>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$Faction" exact="event.param" />
+				<set_value name="$Rep" exact="md.$FactionData.{$Faction}.$Representative.knownname" />
+				<set_value name="$HQ" exact="md.$FactionData.{$Faction}.$Headquarters.knownname"/>
+				<set_value name="$Sector" exact="md.$FactionData.{$Faction}.$Headquarters.sector.knownname"/>
+				<set_value name="$Body" exact="'Aggiornamento in corso.'"/>
+				<set_value name="$Body" exact="'Riceviamo notizie che il quartier generale della %1 si e spostato, per cause ancora ignote. Le fonti dicono che %2 assumera il comando e riprendera le operazioni dalla stazione %3 nel settore %4. La sorte del precedente leader resta incerta.'.[$Faction, $Rep, $HQ, $Sector]"/>
+				<set_value name="$ShortBody" exact="'nuova sede a %1'.[$Sector]"/>
+				<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'" />
+				<set_value name="$Headline" exact="'HQ di %1 trasferito'.[$Faction, $Rep, $Sector]" />
+				<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Eron Alba. ' + $Body"/>
+				<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+				<play_sound object="player.entity" sound="'notification_generic'"/>
+				<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Faction]' + ' ' + 'GameAge=\'%1\' Event=\'HQChange\' EventAction=\'New HQ and faction representative\' Sector=\'%2\' Faction=\'%3\' Station=\'%4\' Rep=\'%5\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Sector, $Faction, $HQ, $Rep]"/>
+				<remove_value name="$Faction" />
+				<remove_value name="$Rep" />
+				<remove_value name="$Body" />
+				<remove_value name="$Ticker" />
+				<remove_value name="$Headline" />
+			</actions>
+		</cue>
+		<!-- Notizie su industria e difesa basate su segnali vanilla verificati -->
+		<cue name="Industrial_Expansion_Headline" instantiate="true">
+			<conditions>
+				<event_object_signalled object="player.galaxy" param="'station expanded'"/>
+			</conditions>
+			<actions>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$Station" exact="event.param2"/>
+				<do_if value="$Station.exists and not $Station.isplayerowned and $Station.trueowner != faction.xenon and $Station.trueowner != faction.scaleplate and not $Station.canbuildships and not $Station.isdefencestation">
+					<set_value name="$Faction" exact="$Station.trueowner"/>
+					<set_value name="$Sector" exact="$Station.sector.knownname"/>
+					<run_actions ref="md.FactionLogic.Get_Faction_Situation_By_Sector" result="this.$NotificationSituation">
+						<param name="Sector" value="$Station.sector"/>
+						<param name="Faction" value="$Faction"/>
+					</run_actions>
+					<set_value name="$Ticker" exact="'\033#cyan_dark_weak_glow#Affari Centrali\033X'" />
+					<set_value name="$Body" exact="'Aggiornamento in corso.'"/>
+					<do_if value="this.$NotificationSituation">
+						<set_value name="$Headline" exact="'%1 potenzia la produzione nel settore %2'.[$Faction.knownname, $Sector]" />
+					</do_if>
+					<do_else>
+						<set_value name="$Headline" exact="'%1 amplia la capacita produttiva nel settore %2'.[$Faction.knownname, $Sector]" />
+					</do_else>
+					<do_if value="not namespace.static.$GNNNewsState.$LastCleanup? or player.age gt namespace.static.$GNNNewsState.$LastCleanup + 30min">
+						<do_if value="namespace.static.$GNNNewsState.$LastByKey.keys.count">
+							<set_value name="$GNNNewsCleanupKeys" exact="namespace.static.$GNNNewsState.$LastByKey.keys.sorted"/>
+							<do_all exact="$GNNNewsCleanupKeys.count" counter="$i">
+								<set_value name="$GNNNewsCleanupKey" exact="$GNNNewsCleanupKeys.{$i}"/>
+								<do_if value="player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey} + 60min">
+									<remove_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey}"/>
+									<remove_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsCleanupKey}"/>
+								</do_if>
+							</do_all>
+						</do_if>
+						<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
+					</do_if>
+					<do_if value="not namespace.static.$lastindustrialnews_by_source?">
+						<set_value name="namespace.static.$lastindustrialnews_by_source" exact="table[]"/>
+					</do_if>
+					<set_value name="$IndustrialNewsKey" exact="'%1|%2'.[$Station.knownname, $Sector]"/>
+					<set_value name="$EmitNews" exact="false"/>
+					<do_if value="not namespace.static.$lastindustrialnews_by_source.{$IndustrialNewsKey}? or player.age gt namespace.static.$lastindustrialnews_by_source.{$IndustrialNewsKey} + 10min">
+						<set_value name="namespace.static.$lastindustrialnews_by_source.{$IndustrialNewsKey}" exact="player.age"/>
+						<do_if value="not namespace.static.$GNNNewsState.$LastByKey.{'industrial|%1'.[$IndustrialNewsKey]}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{'industrial|%1'.[$IndustrialNewsKey]} + 10min">
+							<set_value name="namespace.static.$GNNNewsState.$LastByKey.{'industrial|%1'.[$IndustrialNewsKey]}" exact="player.age"/>
+							<set_value name="namespace.static.$GNNNewsState.$Recent.{'industrial|%1'.[$IndustrialNewsKey]}" exact="player.age"/>
+							<do_if value="not namespace.static.$X4NativeIndustryDefenceGate?">
+								<set_value name="namespace.static.$X4NativeIndustryDefenceGate" exact="table[]"/>
+							</do_if>
+							<do_if value="(not namespace.static.$X4NativeIndustryDefenceGate.$IndustryLastEmit? or player.age gt namespace.static.$X4NativeIndustryDefenceGate.$IndustryLastEmit + 6min) and (not namespace.static.$X4NativeIndustryDefenceGate.$DefenceLastEmit? or player.age gt namespace.static.$X4NativeIndustryDefenceGate.$DefenceLastEmit + 3min)">
+								<set_value name="namespace.static.$X4NativeIndustryDefenceGate.$IndustryLastEmit" exact="player.age"/>
+								<set_value name="$EmitNews" exact="true"/>
+							</do_if>
+						</do_if>
+					<do_if value="$EmitNews">
+						<do_if value="this.$NotificationSituation">
+							<set_value name="$Body" exact="'Fonti locali riferiscono che %1 ha avviato nuove linee produttive nel settore %2. La mossa rafforza i rifornimenti al fronte e segnala margini in crescita nel breve periodo.'.[$Faction.knownname, $Sector]"/>
+							<set_value name="$ShortBody" exact="'rifornimenti in aumento'"/>
+						</do_if>
+						<do_else>
+							<set_value name="$Body" exact="'Le stazioni di %1 hanno riattivato nuove strutture produttive nel settore %2. Il flusso di merci verso i mercati locali torna piu regolare.'.[$Faction.knownname, $Sector]"/>
+							<set_value name="$ShortBody" exact="'produzione in crescita'"/>
+						</do_else>
+						<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Yoyunis Tertasobas Zusilas IV. ' + $Body"/>
+						<set_value name="$MarketFooterKey" exact="'industrial|%1|%2'.[$Station.knownname, $Sector]"/>
+						<do_if value="not namespace.static.$MarketFooterByKey.{$MarketFooterKey}? or player.age gt namespace.static.$MarketFooterByKey.{$MarketFooterKey} + 15min">
+							<set_value name="namespace.static.$MarketFooterByKey.{$MarketFooterKey}" exact="player.age"/>
+							<do_if value="not namespace.static.$LastMarketFooterLight? or player.age gt namespace.static.$LastMarketFooterLight + 5min">
+								<set_value name="namespace.static.$LastMarketFooterLight" exact="player.age"/>
+								<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+							</do_if>
+						</do_if>
+						<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionEconomy]' + ' ' + 'GameAge=\'%1\' Event=\'StationExpanded\' EventAction=\'Production module online\' Sector=\'%2\' Faction=\'%3\' Station=\'%4\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Sector, $Faction.knownname, $Station.knownname]"/>
+					</do_if>
+					</do_if>
+					<do_else>
+						<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionEconomy]' + ' ' + 'GameAge=\'%1\' Event=\'StationExpanded\' EventAction=\'Production module online\' Sector=\'%2\' Faction=\'%3\' Station=\'%4\' Logbook=\'False\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Sector, $Faction.knownname, $Station.knownname]"/>
+					</do_else>
+				</do_if>
+			</actions>
+		</cue>
+		<cue name="Defence_Buildup_Headline" instantiate="true">
+			<conditions>
+				<event_object_construction_sequence_created object="$Station"/>
+				<check_value value="event.param and event.param2"/>
+			</conditions>
+			<actions>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$Station" exact="event.object"/>
+				<do_if value="$Station.exists and not $Station.isplayerowned and $Station.trueowner != faction.xenon and $Station.trueowner != faction.scaleplate and ($Station.isdefencestation or $Station.canbuildships)">
+					<set_value name="$Faction" exact="$Station.trueowner"/>
+					<set_value name="$Sector" exact="$Station.sector.knownname"/>
+					<run_actions ref="md.FactionLogic.Get_Faction_Situation_By_Sector" result="this.$NotificationSituation">
+						<param name="Sector" value="$Station.sector"/>
+						<param name="Faction" value="$Faction"/>
+					</run_actions>
+					<set_value name="$Ticker" exact="'\033#cyan_dark_weak_glow#Affari Centrali\033X'" />
+					<set_value name="$Body" exact="'Aggiornamento in corso.'"/>
+					<do_if value="$Station.isdefencestation">
+						<set_value name="$Headline" exact="'%1 consolida la cintura difensiva in %2'.[$Faction.knownname, $Sector]" />
+					</do_if>
+					<do_elseif value="this.$NotificationSituation">
+						<set_value name="$Headline" exact="'%1 intensifica il riarmo in %2'.[$Faction.knownname, $Sector]" />
+					</do_elseif>
+					<do_else>
+						<set_value name="$Headline" exact="'%1 rafforza la propria presenza navale in %2'.[$Faction.knownname, $Sector]" />
+					</do_else>
+					<do_if value="not namespace.static.$GNNNewsState.$LastCleanup? or player.age gt namespace.static.$GNNNewsState.$LastCleanup + 30min">
+						<do_if value="namespace.static.$GNNNewsState.$LastByKey.keys.count">
+							<set_value name="$GNNNewsCleanupKeys" exact="namespace.static.$GNNNewsState.$LastByKey.keys.sorted"/>
+							<do_all exact="$GNNNewsCleanupKeys.count" counter="$i">
+								<set_value name="$GNNNewsCleanupKey" exact="$GNNNewsCleanupKeys.{$i}"/>
+								<do_if value="player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey} + 60min">
+									<remove_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey}"/>
+									<remove_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsCleanupKey}"/>
+								</do_if>
+							</do_all>
+						</do_if>
+						<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
+					</do_if>
+					<do_if value="not namespace.static.$lastdefencenews_by_source?">
+						<set_value name="namespace.static.$lastdefencenews_by_source" exact="table[]"/>
+					</do_if>
+					<set_value name="$DefenceNewsKey" exact="'%1|%2'.[$Station.knownname, $Sector]"/>
+					<set_value name="$EmitNews" exact="false"/>
+					<do_if value="not namespace.static.$lastdefencenews_by_source.{$DefenceNewsKey}? or player.age gt namespace.static.$lastdefencenews_by_source.{$DefenceNewsKey} + 15min">
+						<set_value name="namespace.static.$lastdefencenews_by_source.{$DefenceNewsKey}" exact="player.age"/>
+						<do_if value="not namespace.static.$GNNNewsState.$LastByKey.{'defence|%1'.[$DefenceNewsKey]}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{'defence|%1'.[$DefenceNewsKey]} + 15min">
+							<set_value name="namespace.static.$GNNNewsState.$LastByKey.{'defence|%1'.[$DefenceNewsKey]}" exact="player.age"/>
+							<set_value name="namespace.static.$GNNNewsState.$Recent.{'defence|%1'.[$DefenceNewsKey]}" exact="player.age"/>
+							<do_if value="not namespace.static.$X4NativeIndustryDefenceGate?">
+								<set_value name="namespace.static.$X4NativeIndustryDefenceGate" exact="table[]"/>
+							</do_if>
+							<do_if value="not namespace.static.$X4NativeIndustryDefenceGate.$DefenceLastEmit? or player.age gt namespace.static.$X4NativeIndustryDefenceGate.$DefenceLastEmit + 4min">
+								<set_value name="namespace.static.$X4NativeIndustryDefenceGate.$DefenceLastEmit" exact="player.age"/>
+								<set_value name="$EmitNews" exact="true"/>
+							</do_if>
+						</do_if>
+					<do_if value="$EmitNews">
+						<do_if value="$Station.isdefencestation">
+							<set_value name="$Body" exact="'Le fonti di sicurezza riferiscono che %1 sta rafforzando le difese nel settore %2. Nuove installazioni e personale aggiuntivo rendono l'area piu difficile da colpire.'.[$Faction.knownname, $Sector]"/>
+							<set_value name="$ShortBody" exact="'difese rafforzate'"/>
+						</do_if>
+						<do_elseif value="this.$NotificationSituation">
+							<set_value name="$Body" exact="'Fonti vicine al fronte parlano di una rapida espansione dei cantieri di %1 nel settore %2. La mossa segnala prontezza operativa e una chiara preparazione a nuove ostilita.'.[$Faction.knownname, $Sector]"/>
+							<set_value name="$ShortBody" exact="'cantieri navali in espansione'"/>
+						</do_elseif>
+						<do_else>
+							<set_value name="$Body" exact="'Le nuove infrastrutture navali di %1 in %2 indicano una presenza piu robusta. Mercanti e capitani seguono con attenzione l'aumento del traffico verso i cantieri.'.[$Faction.knownname, $Sector]"/>
+							<set_value name="$ShortBody" exact="'pattuglie rinforzate'"/>
+						</do_else>
+						<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Yoyunis Tertasobas Zusilas IV. ' + $Body"/>
+						<set_value name="$MarketFooterKey" exact="'defence|%1|%2'.[$Station.knownname, $Sector]"/>
+						<do_if value="not namespace.static.$MarketFooterByKey.{$MarketFooterKey}? or player.age gt namespace.static.$MarketFooterByKey.{$MarketFooterKey} + 15min">
+							<set_value name="namespace.static.$MarketFooterByKey.{$MarketFooterKey}" exact="player.age"/>
+							<do_if value="not namespace.static.$LastMarketFooterLight? or player.age gt namespace.static.$LastMarketFooterLight + 5min">
+								<set_value name="namespace.static.$LastMarketFooterLight" exact="player.age"/>
+								<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+							</do_if>
+						</do_if>
+						<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionMilitary]' + ' ' + 'GameAge=\'%1\' Event=\'StationConstruction\' EventAction=\'Defence buildup\' Sector=\'%2\' Faction=\'%3\' Station=\'%4\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Sector, $Faction.knownname, $Station.knownname]"/>
+					</do_if>
+					</do_if>
+					<do_else>
+						<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionMilitary]' + ' ' + 'GameAge=\'%1\' Event=\'StationConstruction\' EventAction=\'Defence buildup\' Sector=\'%2\' Faction=\'%3\' Station=\'%4\' Logbook=\'False\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Sector, $Faction.knownname, $Station.knownname]"/>
+					</do_else>
+				</do_if>
+			</actions>
+		</cue>
+		<!-- Monitor battaglie fase 1.1: aggregazione canonica per settore e coppia di fazioni, con pulizia dei dati vecchi. -->
+		<cue name="Battle_Track_Destroyed_Object" instantiate="true">
+			<conditions>
+				<event_object_destroyed/>
+				<!-- Origini battaglia verificate: event.object.sector, event.object.owner/trueowner e payload killer. -->
+				<check_value value="event.object.sector"/>
+				<check_value value="event.object.owner or event.object.trueowner"/>
+				<check_value value="event.param"/>
+				<check_any>
+					<check_all>
+						<check_value value="event.object.isrealclass.station"/>
+						<check_value value="not event.object.isclass.buildstorage"/>
+					</check_all>
+					<check_all>
+						<check_value value="event.object.isrealclass.ship"/>
+						<check_value value="not event.object.ismasstraffic"/>
+						<check_value value="not event.object.isdeployable"/>
+						<check_value value="not event.object.isclass.buildstorage"/>
+						<!-- Filtro civile verificato: scarta il traffico minore, tieni navi militari o civili grandi. -->
+						<check_any>
+							<check_value value="event.object.owner != faction.civilian"/>
+							<check_value value="event.object.isclass.ship_m or event.object.isclass.ship_l or event.object.isclass.ship_xl"/>
+							<check_all>
+								<check_value value="event.object.isclass.ship_s"/>
+								<check_value value="event.object.trueowner and event.object.trueowner != faction.ownerless"/>
+							</check_all>
+						</check_any>
+					</check_all>
+					<check_all>
+						<check_value value="event.object.isclass.defensible"/>
+						<check_value value="not event.object.isclass.buildstorage"/>
+					</check_all>
+				</check_any>
+			</conditions>
+			<actions>
+				<do_if value="not namespace.static.$BattleReports?">
+					<set_value name="namespace.static.$BattleReports" exact="table[]"/>
+				</do_if>
+				<!-- Pulizia verificata: rimuove i record di battaglia fermi da un'ora. -->
+				<do_if value="namespace.static.$BattleReports.keys.count">
+					<set_value name="$BattleCleanupKeys" exact="namespace.static.$BattleReports.keys.sorted"/>
+					<do_all exact="$BattleCleanupKeys.count" counter="$i">
+						<set_value name="$BattleCleanupKey" exact="$BattleCleanupKeys.{$i}"/>
+						<do_if value="namespace.static.$BattleReports.{$BattleCleanupKey}? and player.age gt namespace.static.$BattleReports.{$BattleCleanupKey}.$LastUpdate + 60min">
+							<remove_value name="namespace.static.$BattleReports.{$BattleCleanupKey}"/>
+						</do_if>
+					</do_all>
+				</do_if>
+				<set_value name="$BattleSector" exact="event.object.sector"/>
+				<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=Candidate sector=%1 destroyed=%2 id=%3 owner=%4 trueowner=%5 killerType=%6'.[$BattleSector.knownname, event.object.knownname, event.object.idcode, event.object.owner, event.object.trueowner, event.param.typename]"/>
+				<!-- Fazione della nave distrutta: usa trueowner, altrimenti owner. -->
+				<set_value name="$BattleVictimFaction" exact="event.object.owner"/>
+				<do_if value="event.object.trueowner and event.object.trueowner != faction.ownerless">
+					<set_value name="$BattleVictimFaction" exact="event.object.trueowner"/>
+				</do_if>
+				<!-- Normalizza il killer: drone -> commander ship, poi usa trueowner se presente. -->
+				<set_value name="$BattleKillerObject" exact="event.param"/>
+				<set_value name="$BattleUsedCommander" exact="false"/>
+				<do_if value="$BattleKillerObject.typename == 'Drone' and $BattleKillerObject.commander and $BattleKillerObject.commander.isclass.ship">
+					<set_value name="$BattleKillerObject" exact="$BattleKillerObject.commander"/>
+					<set_value name="$BattleUsedCommander" exact="true"/>
+				</do_if>
+				<set_value name="$BattleKillerFaction" exact="$BattleKillerObject.owner"/>
+				<do_if value="$BattleKillerObject.trueowner and $BattleKillerObject.trueowner != faction.ownerless">
+					<set_value name="$BattleKillerFaction" exact="$BattleKillerObject.trueowner"/>
+				</do_if>
+				<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=KillerNormalized sector=%1 killer=%2 id=%3 type=%4 owner=%5 trueowner=%6 usedCommander=%7'.[$BattleSector.knownname, $BattleKillerObject.knownname, $BattleKillerObject.idcode, $BattleKillerObject.typename, $BattleKillerObject.owner, $BattleKillerObject.trueowner, $BattleUsedCommander]"/>
+				<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=FactionsResolved sector=%1 victimFaction=%2 killerFaction=%3'.[$BattleSector.knownname, $BattleVictimFaction, $BattleKillerFaction]"/>
+				<do_if value="$BattleVictimFaction == faction.ownerless">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=Discard reason=VictimFactionOwnerless sector=%1 killerFaction=%2'.[$BattleSector.knownname, $BattleKillerFaction]"/>
+					<return/>
+				</do_if>
+				<do_if value="not $BattleKillerFaction?">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=Discard reason=KillerFactionMissing sector=%1 victimFaction=%2'.[$BattleSector.knownname, $BattleVictimFaction]"/>
+					<return/>
+				</do_if>
+				<do_if value="$BattleKillerFaction == faction.ownerless">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=Discard reason=KillerFactionOwnerless sector=%1 victimFaction=%2 killerFaction=%3'.[$BattleSector.knownname, $BattleVictimFaction, $BattleKillerFaction]"/>
+					<return/>
+				</do_if>
+				<do_if value="$BattleVictimFaction == $BattleKillerFaction">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=Discard reason=KillerEqualsVictim sector=%1 victimFaction=%2 killerFaction=%3'.[$BattleSector.knownname, $BattleVictimFaction, $BattleKillerFaction]"/>
+					<return/>
+				</do_if>
+				<!-- Coppia canonica verificata: tabella a due voci, chiavi ordinate e nomi di fazione riusati. -->
+				<set_value name="$BattlePairTable" exact="table[$BattleVictimFaction.knownname = $BattleVictimFaction, $BattleKillerFaction.knownname = $BattleKillerFaction]"/>
+				<set_value name="$BattlePairKeys" exact="$BattlePairTable.keys.sorted"/>
+				<set_value name="$BattleFactionAKey" exact="$BattlePairKeys.{1}"/>
+				<set_value name="$BattleFactionBKey" exact="$BattlePairKeys.{2}"/>
+				<set_value name="$BattleFactionA" exact="$BattlePairTable.{$BattleFactionAKey}"/>
+				<set_value name="$BattleFactionB" exact="$BattlePairTable.{$BattleFactionBKey}"/>
+				<set_value name="$BattleKey" exact="'%1|%2|%3'.[$BattleSector.knownname, $BattleFactionAKey, $BattleFactionBKey]"/>
+				<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=BattleKey key=%1 factionA=%2 factionB=%3 sector=%4'.[$BattleKey, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleSector.knownname]"/>
+				<set_value name="$BattleReportWasNew" exact="not namespace.static.$BattleReports.{$BattleKey}?"/>
+				<set_value name="$BattleReportLastUpdate" exact="false"/>
+				<do_if value="namespace.static.$BattleReports.{$BattleKey}?">
+					<set_value name="$BattleReportLastUpdate" exact="namespace.static.$BattleReports.{$BattleKey}.$LastUpdate"/>
+				</do_if>
+				<do_if value="not namespace.static.$BattleReports.{$BattleKey}?">
+					<set_value name="namespace.static.$BattleReports.{$BattleKey}" exact="table[$Sector = $BattleSector, $FactionA = $BattleFactionA, $FactionB = $BattleFactionB, $SideAScore = 0, $SideBScore = 0, $Score = 0, $LastUpdate = player.age]"/>
+				</do_if>
+				<set_value name="namespace.static.$BattleReports.{$BattleKey}.$Sector" exact="$BattleSector"/>
+				<set_value name="namespace.static.$BattleReports.{$BattleKey}.$FactionA" exact="$BattleFactionA"/>
+				<set_value name="namespace.static.$BattleReports.{$BattleKey}.$FactionB" exact="$BattleFactionB"/>
+				<set_value name="namespace.static.$BattleReports.{$BattleKey}.$LastUpdate" exact="player.age"/>
+				<set_value name="$LossScore" exact="1"/>
+				<!-- Filtri dimensione nave verificati da HF4 vanilla: ship_xs, ship_s, ship_m, ship_l, ship_xl. -->
+				<do_if value="event.object.isrealclass.station">
+					<set_value name="$LossScore" exact="10"/>
+				</do_if>
+				<do_elseif value="event.object.isclass.ship_l or event.object.isclass.ship_xl">
+					<set_value name="$LossScore" exact="4"/>
+				</do_elseif>
+				<do_elseif value="event.object.isclass.ship_m">
+					<set_value name="$LossScore" exact="2"/>
+				</do_elseif>
+				<do_elseif value="event.object.isclass.ship_xs or event.object.isclass.ship_s">
+					<set_value name="$LossScore" exact="1"/>
+				</do_elseif>
+				<do_elseif value="event.object.isclass.defensible and not event.object.isrealclass.ship">
+					<set_value name="$LossScore" exact="8"/>
+				</do_elseif>
+				<!-- Assegnazione perdite: il punteggio va al lato canonico della fazione distrutta. -->
+				<do_if value="$BattleVictimFaction == $BattleFactionA">
+					<set_value name="namespace.static.$BattleReports.{$BattleKey}.$SideAScore" exact="namespace.static.$BattleReports.{$BattleKey}.$SideAScore + $LossScore"/>
+				</do_if>
+				<do_elseif value="$BattleVictimFaction == $BattleFactionB">
+					<set_value name="namespace.static.$BattleReports.{$BattleKey}.$SideBScore" exact="namespace.static.$BattleReports.{$BattleKey}.$SideBScore + $LossScore"/>
+				</do_elseif>
+				<set_value name="namespace.static.$BattleReports.{$BattleKey}.$Score" exact="namespace.static.$BattleReports.{$BattleKey}.$Score + $LossScore"/>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$BattleSideAScore" exact="namespace.static.$BattleReports.{$BattleKey}.$SideAScore"/>
+				<set_value name="$BattleSideBScore" exact="namespace.static.$BattleReports.{$BattleKey}.$SideBScore"/>
+				<set_value name="$BattleScore" exact="namespace.static.$BattleReports.{$BattleKey}.$Score"/>
+				<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=Loss battleKey=%1 victimFaction=%2 killerFaction=%3 loss=%4 sideA=%5 sideB=%6 score=%7'.[$BattleKey, $BattleVictimFaction.knownname, $BattleKillerFaction.knownname, $LossScore, $BattleSideAScore, $BattleSideBScore, $BattleScore]"/>
+				<do_if value="$BattleReportWasNew or not $BattleReportLastUpdate? or player.age gt $BattleReportLastUpdate + 20min">
+					<signal_cue_instantly cue="Battle_Sector_Under_Attack" param="$BattleKey"/>
+				</do_if>
+				<do_if value="namespace.static.$BattleReports.{$BattleKey}.$Score ge 6 and (not namespace.static.$BattleReports.{$BattleKey}.$LastMajor? or player.age gt namespace.static.$BattleReports.{$BattleKey}.$LastMajor + 30min)">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=Signal trigger=Battle_Escalation_Headline battleKey=%1 score=%2'.[$BattleKey, $BattleScore]"/>
+					<set_value name="namespace.static.$BattleReports.{$BattleKey}.$LastMajor" exact="player.age"/>
+					<signal_cue_instantly cue="Battle_Escalation_Headline" param="$BattleKey"/>
+				</do_if>
+				<do_elseif value="namespace.static.$BattleReports.{$BattleKey}.$Score ge 1 and (not namespace.static.$BattleReports.{$BattleKey}.$LastSkirmish? or player.age gt namespace.static.$BattleReports.{$BattleKey}.$LastSkirmish + 20min)">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleDebug]' + ' stage=Signal trigger=Battle_Open_Headline battleKey=%1 score=%2'.[$BattleKey, $BattleScore]"/>
+					<set_value name="namespace.static.$BattleReports.{$BattleKey}.$LastSkirmish" exact="player.age"/>
+					<signal_cue_instantly cue="Battle_Open_Headline" param="$BattleKey"/>
+				</do_elseif>
+			</actions>
+		</cue>
+		<cue name="Battle_Sector_Under_Attack" instantiate="true">
+			<conditions>
+				<event_cue_signalled/>
+				<!-- Payload del cue verificato: event.param contiene la battle key passata da signal_cue_instantly. -->
+				<check_value value="event.param"/>
+			</conditions>
+			<actions>
+				<set_value name="$BattleKey" exact="event.param"/>
+				<do_if value="not namespace.static.$BattleReports? or not namespace.static.$BattleReports.{$BattleKey}?">
+					<return/>
+				</do_if>
+				<signal_cue_instantly cue="Battle_Open_Headline" param="$BattleKey"/>
+			</actions>
+		</cue>
+		<cue name="Battle_Open_Headline" instantiate="true">
+			<conditions>
+				<event_cue_signalled/>
+				<!-- Payload del cue verificato: event.param contiene la battle key passata da signal_cue_instantly. -->
+				<check_value value="event.param"/>
+			</conditions>
+			<actions>
+				<set_value name="$BattleKey" exact="event.param"/>
+				<do_if value="not namespace.static.$BattleReports? or not namespace.static.$BattleReports.{$BattleKey}?">
+					<return/>
+				</do_if>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$BattleSector" exact="namespace.static.$BattleReports.{$BattleKey}.$Sector"/>
+				<set_value name="$BattleFactionA" exact="namespace.static.$BattleReports.{$BattleKey}.$FactionA"/>
+				<set_value name="$BattleFactionB" exact="namespace.static.$BattleReports.{$BattleKey}.$FactionB"/>
+				<set_value name="$BattleScore" exact="namespace.static.$BattleReports.{$BattleKey}.$Score"/>
+				<set_value name="$BattleSideAScore" exact="namespace.static.$BattleReports.{$BattleKey}.$SideAScore"/>
+				<set_value name="$BattleSideBScore" exact="namespace.static.$BattleReports.{$BattleKey}.$SideBScore"/>
+				<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'" />
+				<set_value name="$Body" exact="'Aggiornamento in corso.'"/>
+				<set_value name="$EmitNews" exact="false"/>
+				<do_if value="not namespace.static.$GNNNewsState.$LastCleanup? or player.age gt namespace.static.$GNNNewsState.$LastCleanup + 30min">
+					<do_if value="namespace.static.$GNNNewsState.$LastByKey.keys.count">
+						<set_value name="$GNNNewsCleanupKeys" exact="namespace.static.$GNNNewsState.$LastByKey.keys.sorted"/>
+						<do_all exact="$GNNNewsCleanupKeys.count" counter="$i">
+							<set_value name="$GNNNewsCleanupKey" exact="$GNNNewsCleanupKeys.{$i}"/>
+							<do_if value="player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey} + 60min">
+								<remove_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey}"/>
+								<remove_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsCleanupKey}"/>
+							</do_if>
+						</do_all>
+					</do_if>
+					<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
+				</do_if>
+				<set_value name="$GNNNewsKey" exact="'battle|open|%1'.[$BattleKey]"/>
+				<set_value name="$EmitNews" exact="false"/>
+				<do_if value="not namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsKey}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsKey} + 20min">
+					<set_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsKey}" exact="player.age"/>
+					<set_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsKey}" exact="player.age"/>
+					<set_value name="$EmitNews" exact="true"/>
+				</do_if>
+				<do_if value="$EmitNews">
+					<do_any>
+					<do_all weight="34">
+						<set_value name="$Headline" exact="'%1: schermaglia tra %2 e %3'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]" />
+						<set_value name="$Body" exact="'Fonti locali riferiscono di scontri circoscritti nel settore %1 tra %2 e %3. Le prime perdite indicano una schermaglia ancora contenuta, ma il traffico civile sta gia cambiando rotta.'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]"/>
+						<set_value name="$ShortBody" exact="'traffico deviato'"/>
+					</do_all>
+					<do_all weight="33">
+						<set_value name="$Headline" exact="'%1: scontri limitati tra %2 e %3'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]" />
+						<set_value name="$Body" exact="'Piloti in transito parlano di ingaggi ripetuti nel settore %1 tra %2 e %3. Per ora il fronte resta limitato, ma le stazioni vicine hanno gia alzato il livello di allerta.'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]"/>
+						<set_value name="$ShortBody" exact="'stazioni in allerta'"/>
+					</do_all>
+					<do_all weight="33">
+						<set_value name="$Headline" exact="'%2 e %3 si misurano in %1'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]" />
+						<set_value name="$Body" exact="'Osservatori del fronte descrivono il settore %1 come teatro di una schermaglia in crescita tra %2 e %3. Le autorita locali raccomandano cautela a chiunque debba attraversare il sistema.'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]"/>
+						<set_value name="$ShortBody" exact="'convogli evitano la zona'"/>
+					</do_all>
+					</do_any>
+					<raise_lua_event name="'gnn.battle.story.emit'" param="'type=battle_open|sector=%1|faction_a=%2|faction_b=%3|severity=%4'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleScore]"/>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Battle]' + ' ' + 'GameAge=\'%1\' Event=\'Battle report\' EventAction=\'Skirmish\' Sector=\'%2\' FactionA=\'%3\' FactionB=\'%4\' SideAScore=\'%5\' SideBScore=\'%6\' Score=\'%7\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleSideAScore, $BattleSideBScore, $BattleScore]"/>
+				</do_if>
+				<do_else>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Battle]' + ' ' + 'GameAge=\'%1\' Event=\'Battle report\' EventAction=\'Skirmish\' Sector=\'%2\' FactionA=\'%3\' FactionB=\'%4\' SideAScore=\'%5\' SideBScore=\'%6\' Score=\'%7\' Logbook=\'False\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleSideAScore, $BattleSideBScore, $BattleScore]"/>
+				</do_else>
+			</actions>
+		</cue>
+		<cue name="Battle_Escalation_Headline" instantiate="true">
+			<conditions>
+				<event_cue_signalled/>
+				<!-- Payload del cue verificato: event.param contiene la battle key passata da signal_cue_instantly. -->
+				<check_value value="event.param"/>
+			</conditions>
+			<actions>
+				<set_value name="$BattleKey" exact="event.param"/>
+				<do_if value="not namespace.static.$BattleReports? or not namespace.static.$BattleReports.{$BattleKey}?">
+					<return/>
+				</do_if>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$BattleSector" exact="namespace.static.$BattleReports.{$BattleKey}.$Sector"/>
+				<set_value name="$BattleFactionA" exact="namespace.static.$BattleReports.{$BattleKey}.$FactionA"/>
+				<set_value name="$BattleFactionB" exact="namespace.static.$BattleReports.{$BattleKey}.$FactionB"/>
+				<set_value name="$BattleScore" exact="namespace.static.$BattleReports.{$BattleKey}.$Score"/>
+				<set_value name="$BattleSideAScore" exact="namespace.static.$BattleReports.{$BattleKey}.$SideAScore"/>
+				<set_value name="$BattleSideBScore" exact="namespace.static.$BattleReports.{$BattleKey}.$SideBScore"/>
+				<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'" />
+				<set_value name="$Body" exact="'Aggiornamento in corso.'"/>
+				<do_if value="not namespace.static.$GNNNewsState.$LastCleanup? or player.age gt namespace.static.$GNNNewsState.$LastCleanup + 30min">
+					<do_if value="namespace.static.$GNNNewsState.$LastByKey.keys.count">
+						<set_value name="$GNNNewsCleanupKeys" exact="namespace.static.$GNNNewsState.$LastByKey.keys.sorted"/>
+						<do_all exact="$GNNNewsCleanupKeys.count" counter="$i">
+							<set_value name="$GNNNewsCleanupKey" exact="$GNNNewsCleanupKeys.{$i}"/>
+							<do_if value="player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey} + 60min">
+								<remove_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey}"/>
+								<remove_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsCleanupKey}"/>
+							</do_if>
+						</do_all>
+					</do_if>
+					<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
+				</do_if>
+				<set_value name="$GNNNewsKey" exact="'battle|major|%1'.[$BattleKey]"/>
+				<set_value name="$EmitNews" exact="false"/>
+				<do_if value="not namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsKey}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsKey} + 30min">
+					<set_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsKey}" exact="player.age"/>
+					<set_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsKey}" exact="player.age"/>
+					<set_value name="$EmitNews" exact="true"/>
+				</do_if>
+				<do_if value="$EmitNews">
+					<do_any>
+					<do_all weight="34">
+						<set_value name="$Headline" exact="'%1: il conflitto tra %2 e %3 si intensifica'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]" />
+						<set_value name="$Body" exact="'Fonti di sicurezza parlano di perdite pesanti nel settore %1, dove %2 e %3 avrebbero impegnato navi di grosso tonnellaggio e installazioni difensive. Le autorita raccomandano di evitare il sistema fino a nuovo avviso.'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]"/>
+						<set_value name="$ShortBody" exact="'rotte chiuse'"/>
+					</do_all>
+					<do_all weight="33">
+						<set_value name="$Headline" exact="'%1 travolto da scontri pesanti tra %2 e %3'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]" />
+						<set_value name="$Body" exact="'Il fronte di %1 sta rapidamente degenerando: %2 e %3 sono ormai impegnate in uno scontro aperto che ha gia interrotto parte dei rifornimenti locali. Mercanti e capitani sono invitati a monitorare gli aggiornamenti.'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]"/>
+						<set_value name="$ShortBody" exact="'rifornimenti interrotti'"/>
+					</do_all>
+					<do_all weight="33">
+						<set_value name="$Headline" exact="'%2 e %3 spingono l'escalation in %1'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]" />
+						<set_value name="$Body" exact="'Le notizie dal settore %1 descrivono una battaglia estesa fra %2 e %3. Pattuglie e convogli stanno convergendo sull'area mentre le difese vicine cercano di contenere l'escalation.'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname]"/>
+						<set_value name="$ShortBody" exact="'rinforzi in arrivo'"/>
+					</do_all>
+					</do_any>
+					<raise_lua_event name="'gnn.battle.story.emit'" param="'type=battle_escalation|sector=%1|faction_a=%2|faction_b=%3|severity=%4'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleScore]"/>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Battle]' + ' ' + 'GameAge=\'%1\' Event=\'Battle report\' EventAction=\'Major battle\' Sector=\'%2\' FactionA=\'%3\' FactionB=\'%4\' SideAScore=\'%5\' SideBScore=\'%6\' Score=\'%7\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleSideAScore, $BattleSideBScore, $BattleScore]"/>
+				</do_if>
+				<do_else>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Battle]' + ' ' + 'GameAge=\'%1\' Event=\'Battle report\' EventAction=\'Major battle\' Sector=\'%2\' FactionA=\'%3\' FactionB=\'%4\' SideAScore=\'%5\' SideBScore=\'%6\' Score=\'%7\' Logbook=\'False\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleSideAScore, $BattleSideBScore, $BattleScore]"/>
+				</do_else>
+			</actions>
+		</cue>
+		<cue name="X4Native_Battle_Logbook_Render" instantiate="true">
+			<conditions>
+				<event_ui_triggered screen="'x4native.gnn.battle.story.emit'"/>
+			</conditions>
+			<actions>
+				<set_value name="$Type" exact="event.param2"/>
+				<set_value name="$Sector" exact="event.param3"/>
+				<set_value name="$FactionA" exact="event.param4"/>
+				<set_value name="$FactionB" exact="event.param5"/>
+				<set_value name="$Severity" exact="event.param6"/>
+				<do_if value="$Type != null and $Sector != null and $FactionA != null and $FactionB != null">
+					<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Esteri\033X'"/>
+					<set_value name="$Headline" exact="'Scontri segnalati in %1'.[$Sector]"/>
+					<set_value name="$ShortBody" exact="'fronte attivo'"/>
+					<set_value name="$Body" exact="'Le ricognizioni confermano combattimenti tra %1 e %2 nel settore %3.'.[$FactionA, $FactionB, $Sector]"/>
+					<do_if value="$Type == 'battle_open'">
+						<set_value name="$Headline" exact="'%1: schermaglia tra %2 e %3'.[$Sector, $FactionA, $FactionB]"/>
+						<set_value name="$ShortBody" exact="'traffico deviato'"/>
+						<set_value name="$Body" exact="'Fonti locali riferiscono di scontri circoscritti nel settore %1 tra %2 e %3. Le rotte civili vicine vengono monitorate con attenzione.'.[$Sector, $FactionA, $FactionB]"/>
+					</do_if>
+					<do_elseif value="$Type == 'battle_escalation'">
+						<set_value name="$Headline" exact="'%1: escalation tra %2 e %3'.[$Sector, $FactionA, $FactionB]"/>
+						<set_value name="$ShortBody" exact="'rinforzi in arrivo'"/>
+						<set_value name="$Body" exact="'Le notizie da %1 descrivono una battaglia estesa tra %2 e %3, con rinforzi in movimento e rischio crescente per i convogli.'.[$Sector, $FactionA, $FactionB]"/>
+					</do_elseif>
+					<set_value name="$Title" exact="$Ticker + '-' + $Headline"/>
+					<set_value name="$Text" exact="'Dal desk di Eron Alba. ' + $Body"/>
+					<do_if value="not namespace.static.$X4NativeGnnBattleLogbookLastByKey?">
+						<set_value name="namespace.static.$X4NativeGnnBattleLogbookLastByKey" exact="table[]"/>
+					</do_if>
+					<set_value name="$LogbookKey" exact="'%1|%2'.[$Title, $Text]"/>
+					<do_if value="not namespace.static.$X4NativeGnnBattleLogbookLastByKey.{$LogbookKey}? or player.age gt namespace.static.$X4NativeGnnBattleLogbookLastByKey.{$LogbookKey} + 10min">
+						<set_value name="namespace.static.$X4NativeGnnBattleLogbookLastByKey.{$LogbookKey}" exact="player.age"/>
+						<write_to_logbook category="tips" title="$Title" text="$Text"/>
+					</do_if>
+				</do_if>
+			</actions>
+		</cue>
+		<cue name="X4Native_Market_Logbook_Render" instantiate="true">
+			<conditions>
+				<event_ui_triggered screen="'x4native.gnn.market.story.emit'"/>
+			</conditions>
+			<actions>
+				<set_value name="$Topic" exact="event.param2"/>
+				<set_value name="$Sector" exact="event.param3"/>
+				<set_value name="$Priority" exact="event.param4"/>
+				<do_if value="$Topic != null and $Sector != null">
+					<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Centrali\033X'"/>
+					<set_value name="$Headline" exact="'Aggiornamento di mercato'"/>
+					<set_value name="$ShortBody" exact="'aggiornamento operativo'"/>
+					<set_value name="$Body" exact="'Dal settore %1 arrivano nuovi segnali di mercato. Il quadro resta in evoluzione.'.[$Sector]"/>
+					<do_if value="$Topic == 'factory_shortage'">
+						<set_value name="$Headline" exact="'Nuova capacita produttiva richiesta in %1'.[$Sector]"/>
+						<set_value name="$ShortBody" exact="'cantieri sotto pressione'"/>
+						<set_value name="$Body" exact="'Le linee industriali di %1 lavorano oltre soglia e le corporazioni locali chiedono nuova capacita produttiva.'.[$Sector]"/>
+					</do_if>
+					<do_elseif value="$Topic == 'energy_spike'">
+						<set_value name="$Headline" exact="'Impennata energetica segnalata in %1'.[$Sector]"/>
+						<set_value name="$ShortBody" exact="'ordini urgenti'"/>
+						<set_value name="$Body" exact="'Nel settore %1 la domanda energetica accelera rapidamente e i distributori segnalano ordini urgenti in aumento.'.[$Sector]"/>
+					</do_elseif>
+					<do_elseif value="$Topic == 'hull_surplus'">
+						<set_value name="$Headline" exact="'Surplus di scafi rilevato in %1'.[$Sector]"/>
+						<set_value name="$ShortBody" exact="'surplus nei magazzini'"/>
+						<set_value name="$Body" exact="'I depositi di %1 mostrano scorte di scafi sopra la media e i trader riferiscono pressione sui prezzi.'.[$Sector]"/>
+					</do_elseif>
+					<set_value name="$Title" exact="$Ticker + '-' + $Headline"/>
+					<set_value name="$Text" exact="'Dal desk di Eron Alba. ' + $Body"/>
+					<do_if value="not namespace.static.$X4NativeGnnMarketLogbookLastByKey?">
+						<set_value name="namespace.static.$X4NativeGnnMarketLogbookLastByKey" exact="table[]"/>
+					</do_if>
+					<set_value name="$LogbookKey" exact="'%1|%2'.[$Title, $Text]"/>
+					<do_if value="not namespace.static.$X4NativeGnnMarketLogbookLastByKey.{$LogbookKey}? or player.age gt namespace.static.$X4NativeGnnMarketLogbookLastByKey.{$LogbookKey} + 10min">
+						<set_value name="namespace.static.$X4NativeGnnMarketLogbookLastByKey.{$LogbookKey}" exact="player.age"/>
+						<write_to_logbook category="tips" title="$Title" text="$Text"/>
+					</do_if>
+				</do_if>
+			</actions>
+		</cue>
+		<!-- Problemi di trasporto: intercetta le richieste di freighter prioritari delle fazioni -->
+		<!-- <signal_cue_instantly cue="md.Galaxy_News_Network_Feed.Market_Chatter_Freighter_Needed" param="[$Ware, $Requester, $Faction, $Miner, $RequestSector]"/> -->
+		<cue name="Market_Chatter_Freighter_Needed" instantiate="true">
+			<conditions>
+				<event_cue_signalled/>
+				<check_value value="@event.param.{3} != faction.xenon and @event.param.{3} != faction.scaleplate"/>
+			</conditions>
+			<actions>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$Ware" exact="event.param.{1}"/>
+				<set_value name="$Requester" exact="event.param.{2}"/>
+				<set_value name="$Faction" exact="event.param.{3}"/>
+				<set_value name="$Miner" exact="event.param.{4}"/>
+				<set_value name="$RequestSector" exact="event.param.{5}"/>
+				<set_value name="$Body" exact="'Aggiornamento di mercato in corso.'"/>
+				<set_value name="$ShortBody" exact="'aggiornamento operativo'"/>
+				<do_if value="$RequestSector">
+					<set_value name="$Requester" exact="$RequestSector"/>
+				</do_if>
+				<do_any>
+					<do_all>
+						<set_value name="$Body" exact="'Gli operatori delle stazioni sono sempre piu sotto pressione: le merci si accumulano negli stoccaggi e mancano piloti e freighter per smaltire i carichi di %2 in %1.'.[$Requester.knownname, $Ware]"/>
+						<set_value name="$ShortBody" exact="'consegne in ritardo'"/>
+					</do_all>
+					<do_all>
+						<set_value name="$Body" exact="'Le richieste di trasporto per %2 stanno crescendo in %1 e le stazioni cercano di liberare i magazzini offrendo sconti sui surplus.'.[$Requester.knownname, $Ware]"/>
+						<set_value name="$ShortBody" exact="'scorte in accumulo'"/>
+					</do_all>
+					<do_all>
+						<set_value name="$Body" exact="'La guerra si fa sentire nello spazio %3: i piloti cargo sono stati dirottati al fronte e le rotte commerciali di %2 in %1 restano scoperte. Le baie cargo si riempiono mentre lo stoccaggio si assottiglia.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+						<set_value name="$ShortBody" exact="'rifornimenti al fronte sotto pressione'"/>
+					</do_all>
+					<do_all>
+						<set_value name="$Body" exact="'In %1 cresce la carenza di piloti cargo per muovere merci di %2 nello spazio %3. La domanda resta alta e le stazioni faticano a tenere il passo.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+						<set_value name="$ShortBody" exact="'carenza di piloti cargo'"/>
+					</do_all>
+					<do_all>
+						<set_value name="$Body" exact="'Il nostro amico teladi preferito dice che il trasporto rende profittsss proprio ora nel settore REDACTED, soprattutto per le merci REDACTED. Interessato a saperne di piu? Considera un Teladi Trading Terminal per iniziare il tuo cammino verso profittsss illimitati!'"/>
+						<set_value name="$ShortBody" exact="'magazzini saturi'"/>
+					</do_all>
+					<do_all>
+						<set_value name="$Body" exact="'La sicurezza del settore di %3 in %1 e sotto pressione: le stazioni sono diventate un bersaglio redditizio per i pirati. Le merci si accumulano sui moli e i criminali trovano gioco facile.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+						<set_value name="$ShortBody" exact="'attracchi congestionati'"/>
+					</do_all>
+				</do_any>
+				<set_value name="$Ticker" exact="'\033#cyan_dark_weak_glow#Affari Centrali\033X'" />
+				<set_value name="$Headline" exact="'Problemi logistici per %1'.[$Requester.knownname, $Ware]" />
+				<set_value name="$EmitNews" exact="false"/>
+				<do_if value="not namespace.static.$GNNNewsState.$LastCleanup? or player.age gt namespace.static.$GNNNewsState.$LastCleanup + 30min">
+					<do_if value="namespace.static.$GNNNewsState.$LastByKey.keys.count">
+						<set_value name="$GNNNewsCleanupKeys" exact="namespace.static.$GNNNewsState.$LastByKey.keys.sorted"/>
+						<do_all exact="$GNNNewsCleanupKeys.count" counter="$i">
+							<set_value name="$GNNNewsCleanupKey" exact="$GNNNewsCleanupKeys.{$i}"/>
+							<do_if value="player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey} + 60min">
+								<remove_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey}"/>
+								<remove_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsCleanupKey}"/>
+							</do_if>
+						</do_all>
+					</do_if>
+					<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
+				</do_if>
+				<do_if value="not namespace.static.$GNNNewsState.$LastByKey.{'market|freighter|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{'market|freighter|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]} + 15min">
+					<set_value name="namespace.static.$GNNNewsState.$LastByKey.{'market|freighter|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]}" exact="player.age"/>
+					<set_value name="namespace.static.$GNNNewsState.$Recent.{'market|freighter|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]}" exact="player.age"/>
+					<set_value name="$EmitNews" exact="true"/>
+				</do_if>
+				<do_if value="$EmitNews">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionEconomy]' + ' ' + 'GameAge=\'%1\' Event=\'Transportation issue\' EventAction=\'Freighter requested\' Requester=\'%2\' Faction=\'%3\' Ware=\'%4\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Requester.knownname, $Faction.knownname, $Ware]"/>
+				</do_if>
+				<do_else>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionEconomy]' + ' ' + 'GameAge=\'%1\' Event=\'Transportation issue\' EventAction=\'Freighter requested\' Requester=\'%2\' Faction=\'%3\' Ware=\'%4\' Logbook=\'False\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Requester.knownname, $Faction.knownname, $Ware]"/>
+				</do_else>
+			</actions>	
+		</cue>
+		<!-- Carenza produttiva: intercetta la richiesta di una nuova stazione -->
+		<!-- <signal_cue_instantly cue="md.Galaxy_News_Network_Feed.Market_Chatter_Factory_Needed" param="[$Ware, $RequestSector, $Faction]"/> -->
+		<cue name="Market_Chatter_Factory_Needed" instantiate="true">
+			<conditions>
+				<event_cue_signalled/>
+				<check_value value="@event.param.{3} != faction.xenon and @event.param.{3} != faction.scaleplate"/>
+			</conditions>
+			<actions>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$Ware" exact="event.param.{1}"/>
+				<set_value name="$Requester" exact="event.param.{2}"/>
+				<set_value name="$Faction" exact="event.param.{3}"/>
+				<set_value name="$Body" exact="'Aggiornamento in corso.'"/>
+				<set_value name="$ShortBody" exact="'aggiornamento operativo'"/>
+					<do_if value="$Ware.hastag.minable">
+						<do_any>
+							<do_all>
+							<set_value name="$Body" exact="'Gli analisti di mercato dicono che %1 sta vivendo una grave carenza di %2. I minatori ricevono un extra per ogni carico, nel tentativo di rimettere in moto la catena.'.[$Requester.knownname, $Ware]"/>
+							<set_value name="$ShortBody" exact="'estrazioni rallentate'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Secondo i rapporti economici, %1 ha attualmente bisogno di stazioni per trattare %2. Rivolgiti all'ufficio licenze %3 piu vicino per informazioni sui lotti disponibili.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'raffinazione sotto pressione'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Una fonte teladi anonima ha grandi notizie sul prossimo balzo dei prezzi del minerale. Profittsss e molto altro ti aspettano, una volta che avrai preso il tuo Teladi Trading Terminal!'"/>
+							<set_value name="$ShortBody" exact="'prezzi in rialzo'"/>
+						</do_all>
+					</do_any>
+				</do_if>
+				<do_else>
+					<do_any>
+						<do_all>
+							<set_value name="$Body" exact="'Le chiacchiere del mercato indicano che nei prossimi giorni %1 soffrira una carenza di %2. I funzionari del settore stanno gia alzando i prezzi per rallentare la domanda.'.[$Requester.knownname, $Ware]"/>
+							<set_value name="$ShortBody" exact="'scorte in calo'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'I nostri amici teladi dicono che le merci %1, REDACTED e REDACTED stanno vedendo una domanda in forte aumento presso la stazione REDACTED nel settore REDACTED. Interessato a saperne di piu? Acquista oggi un Teladi Trading Terminal: TTT, il meglio nei rapporti economici, idee di commercio e analisi della produzione nella galassia.'.[$Ware, $Requester.knownname]"/>
+							<set_value name="$ShortBody" exact="'ordini urgenti'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Un analista delle materie prime di %3 prevede che nei prossimi giorni %1 vedra schizzare la domanda di %2. La stazione nega tutto, assicurando che le operazioni restano nella norma.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'domanda in forte aumento'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'La borsa di %3 oggi e in fermento: le previsioni su una carenza di %2 in %1 sembrano trovare conferma. I trader scommettevano gia su una domanda in forte aumento per via del conflitto in corso.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'rifornimenti dirottati dal conflitto'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'I funzionari commerciali di %3 hanno vietato oggi tutte le esportazioni di %2 da %1, dirottando la produzione a sostegno della guerra civile in corso con gli HOP. Gli analisti vedono un segnale preoccupante per le scorte future.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'export bloccato'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Le tensioni tra Split e Federazione Argon si sono acuite oggi dopo una lite in una baia di attracco teladi, nata da un contratto di fornitura di merci %2 da consegnare a %1. La sicurezza teladi ha chiuso la disputa confiscando le merci, citando una violazione dei protocolli commerciali.'.[$Requester.knownname, $Ware]"/>
+							<set_value name="$ShortBody" exact="'forniture bloccate'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Si diffonde tra le stazioni commerciali la notizia che %1 sta affrontando una carenza di cibo e forniture mediche. Gli analisti consigliano prudenza: vendi la notizia, compra il pettegolezzo.'.[$Requester.knownname, $Ware]"/>
+							<set_value name="$ShortBody" exact="'scorte essenziali in esaurimento'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Oggi la borsa di %3 e molto attiva: i prezzi di %2 schizzano alle stelle in %1. MarketTalk segnala un forte aumento dei traffici verso %1 mentre i trasportatori capitalizzano sull'occasione.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'traffico in aumento'"/>
+						</do_all>
+					</do_any>
+				</do_else>
+				<set_value name="$Ticker" exact="'\033#cyan_dark_weak_glow#Affari Centrali\033X'" />
+				<set_value name="$Headline" exact="'Impennata della domanda di %2'.[$Requester.knownname, $Ware]" />
+				<set_value name="$EmitNews" exact="false"/>
+				<do_if value="not namespace.static.$GNNNewsState.$LastCleanup? or player.age gt namespace.static.$GNNNewsState.$LastCleanup + 30min">
+					<do_if value="namespace.static.$GNNNewsState.$LastByKey.keys.count">
+						<set_value name="$GNNNewsCleanupKeys" exact="namespace.static.$GNNNewsState.$LastByKey.keys.sorted"/>
+						<do_all exact="$GNNNewsCleanupKeys.count" counter="$i">
+							<set_value name="$GNNNewsCleanupKey" exact="$GNNNewsCleanupKeys.{$i}"/>
+							<do_if value="player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey} + 60min">
+								<remove_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey}"/>
+								<remove_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsCleanupKey}"/>
+							</do_if>
+						</do_all>
+					</do_if>
+					<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
+				</do_if>
+				<do_if value="not namespace.static.$GNNNewsState.$LastByKey.{'market|factory|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{'market|factory|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]} + 15min">
+					<set_value name="namespace.static.$GNNNewsState.$LastByKey.{'market|factory|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]}" exact="player.age"/>
+					<set_value name="namespace.static.$GNNNewsState.$Recent.{'market|factory|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]}" exact="player.age"/>
+					<set_value name="$EmitNews" exact="true"/>
+				</do_if>
+				<do_if value="$EmitNews">
+					<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="'Dal desk di Yoyunis Tertasobas Zusilas IV. ' + $Body"/>
+					<set_value name="$MarketFooterKey" exact="'factory|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]"/>
+					<do_if value="not namespace.static.$MarketFooterByKey.{$MarketFooterKey}? or player.age gt namespace.static.$MarketFooterByKey.{$MarketFooterKey} + 15min">
+						<set_value name="namespace.static.$MarketFooterByKey.{$MarketFooterKey}" exact="player.age"/>
+						<do_if value="not namespace.static.$LastMarketFooterLight? or player.age gt namespace.static.$LastMarketFooterLight + 5min">
+							<set_value name="namespace.static.$LastMarketFooterLight" exact="player.age"/>
+							<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+						</do_if>
+					</do_if>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionEconomy]' + ' ' + 'GameAge=\'%1\' Event=\'Production Shortage\' EventAction=\'Factory requested\' Requester=\'%2\' Faction=\'%3\' Ware=\'%4\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Requester.knownname, $Faction.knownname, $Ware]"/>
+				</do_if>
+				<do_else>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionEconomy]' + ' ' + 'GameAge=\'%1\' Event=\'Production Shortage\' EventAction=\'Factory requested\' Requester=\'%2\' Faction=\'%3\' Ware=\'%4\' Logbook=\'False\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Requester.knownname, $Faction.knownname, $Ware]"/>
+				</do_else>
+			</actions>
+		</cue>
+		<!-- Surplus di merce: intercetta la richiesta di fermare la produzione -->
+		<!-- <signal_cue_instantly cue="md.Galaxy_News_Network_Feed.Market_Chatter_Pause_Production" param="[$Product, $RequestSector, $Faction]"/>-->
+		<cue name="Market_Chatter_Pause_Production" instantiate="true">
+			<conditions>
+				<event_cue_signalled/>
+				<check_value value="@event.param.{3} != faction.xenon and @event.param.{3} != faction.scaleplate"/>
+			</conditions>
+			<actions>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$Ware" exact="event.param.{1}"/>
+				<set_value name="$Requester" exact="event.param.{2}"/>
+				<set_value name="$Faction" exact="event.param.{3}"/>
+				<set_value name="$Body" exact="'Aggiornamento di mercato in corso.'"/>
+				<set_value name="$ShortBody" exact="'aggiornamento operativo'"/>
+				<do_if value="$Ware.hastag.minable">
+					<do_any>
+						<do_all>
+							<set_value name="$Body" exact="'Le compagnie minerarie locali sono nel caos dopo il crollo dei prezzi di acquisto di %1 in alcuni settori dello spazio %2. I funzionari di %2 dicono che il comparto tornera redditizio solo fra settimane.'.[$Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'miniere in sofferenza'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Secondo i rapporti economici, %1 ha bisogno di raffinerie per trattare %2. Rivolgiti all'ufficio licenze %3 piu vicino per i dettagli sui lotti disponibili.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'raffinazione sotto pressione'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Le voci tra gli operatori minerari suggeriscono che i prezzi in %1 siano troppo bassi per rendere redditiva l'estrazione di %2.'.[$Requester.knownname, $Ware]"/>
+							<set_value name="$ShortBody" exact="'estrazione in perdita'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Gli analisti di MarketTalk vedono un calo del traffico minerario in %1. I prezzi troppo bassi potrebbero tenere lontane le compagnie minerarie.'.[$Requester.knownname, $Ware]"/>
+							<set_value name="$ShortBody" exact="'traffico minerario rallenta'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'I minerali stanno subendo un crollo drastico dei prezzi nel settore _______. Vuoi riempire gli spazi e guadagnare piu profittsss? Acquista oggi un Teladi Trading Terminal: TTT, profittsss a voi, ma solo se siete abbonati.'"/>
+							<set_value name="$ShortBody" exact="'profitti in picchiata'"/>
+						</do_all>
+					</do_any>
+				</do_if>
+				<do_else>
+					<do_any>
+						<do_all>
+							<set_value name="$Body" exact="'A %2 il surplus di %1 sta mandando il mercato in crisi. In alcuni settori controllati da %2 le offerte si sono gia spente nella notte.'.[$Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'mercato saturo'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'I lavoratori esperti nella produzione di %2 lasciano in massa le stazioni attorno a %1 mentre le linee di produzione si fermano. Le merci invendute riempiono gli stoccaggi e la produzione non conviene piu.'.[$Requester.knownname, $Ware]"/>
+							<set_value name="$ShortBody" exact="'produzione ferma'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'%3 sta imponendo oggi una riduzione dei prezzi di %2 in alcuni settori a causa di un surplus senza precedenti di prodotti invenduti. Le stazioni stanno abbassando i listini per liberare spazio nei magazzini.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'prezzi tagliati'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Sembra l'inizio di un nuovo crollo per %1: i responsabili delle stazioni fermano le linee di produzione di %2 perche la domanda non basta piu a sostenerle.'.[$Requester.knownname, $Ware]"/>
+							<set_value name="$ShortBody" exact="'linee ferme'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Le merci %1 e REDACTED stanno riempiendo le baie cargo oggi nella stazione REDACTED nel settore REDACTED. Vuoi riempire gli spazi e guadagnare piu profittsss? Acquista oggi un Teladi Trading Terminal: TTT, il meglio nei rapporti economici, voci di commercio e analisi della produzione nella galassia.'.[$Ware, $Requester.knownname]"/>
+							<set_value name="$ShortBody" exact="'surplus da smaltire'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'La sicurezza del settore di %1 e sotto pressione: le stazioni locali hanno dovuto tagliare gran parte della forza lavoro e chiudere le linee di produzione di %2 per mancanza di domanda.'.[$Requester.knownname, $Ware]"/>
+							<set_value name="$ShortBody" exact="'occupazione in calo'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Un capitano teladi anonimo di freighter ci riferisce che la domanda di %2 sta calando in alcuni settori di %1. Per i dettagli completi, il vostro Teladi Trading Terminal piu vicino resta il posto giusto.'.[$Faction.knownname, $Ware]"/>
+							<set_value name="$ShortBody" exact="'domanda in calo'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'%2 funzionari vorrebbero ricordare a tutti i produttori di %1 recentemente disoccupati che mendicare professionalmente non e una carriera accettabile. Recatevi al piu vicino ufficio di collocamento di settore per una nuova assegnazione.'.[$Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'personale riassegnato'"/>
+						</do_all>
+						<do_all>
+							<set_value name="$Body" exact="'Le compagnie specializzate nella produzione di %2 stanno iniziando a sentire la pressione: costo e tempo necessari superano il valore del prodotto finale in alcuni settori dello spazio %3.'.[$Requester.knownname, $Ware, $Faction.knownname]"/>
+							<set_value name="$ShortBody" exact="'profitti sotto pressione'"/>
+						</do_all>
+					</do_any>
+				</do_else>
+				<set_value name="$Ticker" exact="'\033#cyan_dark_weak_glow#Affari Centrali\033X'" />
+				<set_value name="$Headline" exact="'Crollo dei prezzi di %2'.[$Requester.knownname, $Ware]" />
+				<set_value name="$EmitNews" exact="false"/>
+				<do_if value="not namespace.static.$GNNNewsState.$LastCleanup? or player.age gt namespace.static.$GNNNewsState.$LastCleanup + 30min">
+					<do_if value="namespace.static.$GNNNewsState.$LastByKey.keys.count">
+						<set_value name="$GNNNewsCleanupKeys" exact="namespace.static.$GNNNewsState.$LastByKey.keys.sorted"/>
+						<do_all exact="$GNNNewsCleanupKeys.count" counter="$i">
+							<set_value name="$GNNNewsCleanupKey" exact="$GNNNewsCleanupKeys.{$i}"/>
+							<do_if value="player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey} + 60min">
+								<remove_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey}"/>
+								<remove_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsCleanupKey}"/>
+							</do_if>
+						</do_all>
+					</do_if>
+					<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
+				</do_if>
+				<do_if value="not namespace.static.$GNNNewsState.$LastByKey.{'market|pause|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{'market|pause|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]} + 15min">
+					<set_value name="namespace.static.$GNNNewsState.$LastByKey.{'market|pause|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]}" exact="player.age"/>
+					<set_value name="namespace.static.$GNNNewsState.$Recent.{'market|pause|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]}" exact="player.age"/>
+					<set_value name="$EmitNews" exact="true"/>
+				</do_if>
+				<do_if value="$EmitNews">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionEconomy]' + ' ' + 'GameAge=\'%1\' Event=\'Excess Wares\' EventAction=\'Pause Production\' Requester=\'%2\' Faction=\'%3\' Ware=\'%4\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Requester.knownname, $Faction.knownname, $Ware]"/>
+				</do_if>
+				<do_else>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionEconomy]' + ' ' + 'GameAge=\'%1\' Event=\'Excess Wares\' EventAction=\'Pause Production\' Requester=\'%2\' Faction=\'%3\' Ware=\'%4\' Logbook=\'False\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Requester.knownname, $Faction.knownname, $Ware]"/>
+				</do_else>
+			</actions>
+		</cue>
+		<!-- Hook notizie Tide of Avarice: trigger verificato su phase-start, fase letta da event.param. -->
+		<cue name="Tide_Warning_Headline" instantiate="true">
+			<conditions>
+				<event_object_phase_started object="md.Setup_DLC_Pirate.TheWave.$WaveClusterCelestialBody"/>
+				<!-- Discriminante di fase verificato dal trigger Tide scoperto. -->
+				<check_value value="event.param == 'warning'"/>
+			</conditions>
+			<actions>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$TidePhaseId" exact="event.param"/>
+				<set_value name="$TidePhaseStart" exact="event.object.phase.current.starttime"/>
+				<do_if value="not namespace.static.$GNNNewsState.$LastCleanup? or player.age gt namespace.static.$GNNNewsState.$LastCleanup + 30min">
+					<do_if value="namespace.static.$GNNNewsState.$LastByKey.keys.count">
+						<set_value name="$GNNNewsCleanupKeys" exact="namespace.static.$GNNNewsState.$LastByKey.keys.sorted"/>
+						<do_all exact="$GNNNewsCleanupKeys.count" counter="$i">
+							<set_value name="$GNNNewsCleanupKey" exact="$GNNNewsCleanupKeys.{$i}"/>
+							<do_if value="player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey} + 60min">
+								<remove_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey}"/>
+								<remove_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsCleanupKey}"/>
+							</do_if>
+						</do_all>
+					</do_if>
+					<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
+				</do_if>
+				<do_if value="not namespace.static.$TideWarningLastStart? or namespace.static.$TideWarningLastStart != $TidePhaseStart">
+					<set_value name="namespace.static.$TideWarningLastStart" exact="$TidePhaseStart"/>
+					<set_value name="$Ticker" exact="'\033#azure_weak_glow#Allerta Maree\033X'"/>
+					<set_value name="$EmitNews" exact="false"/>
+					<do_if value="not namespace.static.$GNNNewsState.$LastByKey.{'tide|warning|%1'.[$TidePhaseStart]}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{'tide|warning|%1'.[$TidePhaseStart]} + 60min">
+						<set_value name="namespace.static.$GNNNewsState.$LastByKey.{'tide|warning|%1'.[$TidePhaseStart]}" exact="player.age"/>
+						<set_value name="namespace.static.$GNNNewsState.$Recent.{'tide|warning|%1'.[$TidePhaseStart]}" exact="player.age"/>
+						<set_value name="$EmitNews" exact="true"/>
+					</do_if>
+					<do_if value="$EmitNews">
+						<do_any>
+						<do_all weight="50">
+							<set_value name="$Headline" exact="'Allerta maree: evacuazione dalle aree esposte'"/>
+							<set_value name="$Body" exact="'Le autorita locali invitano equipaggi e passeggeri a lasciare al piu presto le aree esposte. Convogli civili e traffico commerciale stanno gia deviando verso rotte piu sicure mentre il sistema entra nella fase di preallarme.'"/>
+							<set_value name="$ShortBody" exact="'evacuazione delle aree esposte'"/>
+						</do_all>
+						<do_all weight="50">
+							<set_value name="$Headline" exact="'Marea in arrivo: traffico deviato verso rotte sicure'"/>
+							<set_value name="$Body" exact="'Fonti di sicurezza confermano una finestra di evacuazione prima dell'impatto. Le tratte piu rischiose sono state temporaneamente chiuse e ogni attraversamento non essenziale viene fortemente sconsigliato.'"/>
+							<set_value name="$ShortBody" exact="'rotte chiuse prima dell'impatto'"/>
+						</do_all>
+						</do_any>
+					<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="$Body"/>
+					<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+					<play_sound object="player.entity" sound="'notification_generic'"/>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Tide]' + ' ' + 'GameAge=\'%1\' Event=\'Tide\' EventAction=\'Warning\' Phase=\'%2\' PhaseStart=\'%3\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $TidePhaseId, $TidePhaseStart]"/>
+				</do_if>
+				<do_else>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Tide]' + ' ' + 'GameAge=\'%1\' Event=\'Tide\' EventAction=\'Warning\' Phase=\'%2\' PhaseStart=\'%3\' Logbook=\'False\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $TidePhaseId, $TidePhaseStart]"/>
+				</do_else>
+			</do_if>
+			</actions>
+		</cue>
+		<cue name="Tide_Wave_Headline" instantiate="true">
+			<conditions>
+				<event_object_phase_started object="md.Setup_DLC_Pirate.TheWave.$WaveClusterCelestialBody"/>
+				<!-- Discriminante di fase verificato dal trigger Tide scoperto. -->
+				<check_value value="event.param == 'wave'"/>
+			</conditions>
+			<actions>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$TidePhaseId" exact="event.param"/>
+				<set_value name="$TidePhaseStart" exact="event.object.phase.current.starttime"/>
+				<do_if value="not namespace.static.$GNNNewsState.$LastCleanup? or player.age gt namespace.static.$GNNNewsState.$LastCleanup + 30min">
+					<do_if value="namespace.static.$GNNNewsState.$LastByKey.keys.count">
+						<set_value name="$GNNNewsCleanupKeys" exact="namespace.static.$GNNNewsState.$LastByKey.keys.sorted"/>
+						<do_all exact="$GNNNewsCleanupKeys.count" counter="$i">
+							<set_value name="$GNNNewsCleanupKey" exact="$GNNNewsCleanupKeys.{$i}"/>
+							<do_if value="player.age gt namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey} + 60min">
+								<remove_value name="namespace.static.$GNNNewsState.$LastByKey.{$GNNNewsCleanupKey}"/>
+								<remove_value name="namespace.static.$GNNNewsState.$Recent.{$GNNNewsCleanupKey}"/>
+							</do_if>
+						</do_all>
+					</do_if>
+					<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
+				</do_if>
+				<do_if value="not namespace.static.$TideWaveLastStart? or namespace.static.$TideWaveLastStart != $TidePhaseStart">
+					<set_value name="namespace.static.$TideWaveLastStart" exact="$TidePhaseStart"/>
+					<set_value name="$Ticker" exact="'\033#azure_weak_glow#Allerta Maree\033X'"/>
+					<set_value name="$EmitNews" exact="false"/>
+					<do_if value="not namespace.static.$GNNNewsState.$LastByKey.{'tide|wave|%1'.[$TidePhaseStart]}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{'tide|wave|%1'.[$TidePhaseStart]} + 60min">
+						<set_value name="namespace.static.$GNNNewsState.$LastByKey.{'tide|wave|%1'.[$TidePhaseStart]}" exact="player.age"/>
+						<set_value name="namespace.static.$GNNNewsState.$Recent.{'tide|wave|%1'.[$TidePhaseStart]}" exact="player.age"/>
+						<set_value name="$EmitNews" exact="true"/>
+					</do_if>
+					<do_if value="$EmitNews">
+						<do_any>
+						<do_all weight="50">
+							<set_value name="$Headline" exact="'Onda di marea: navigazione sospesa'"/>
+							<set_value name="$Body" exact="'L'onda di marea e in corso e le prime segnalazioni parlano di danni estesi a navi e installazioni. Le autorita raccomandano di restare al riparo e di evitare ogni navigazione non indispensabile fino a nuovo avviso.'"/>
+							<set_value name="$ShortBody" exact="'danni a navi e stazioni'"/>
+						</do_all>
+						<do_all weight="50">
+							<set_value name="$Headline" exact="'Emergenza maree: sistema investito dall'onda di marea'"/>
+							<set_value name="$Body" exact="'L'onda di marea ha colpito il sistema e le rotte locali risultano estremamente pericolose. Stazioni e convogli segnalano interruzioni e danni mentre la zona entra in stato di emergenza.'"/>
+							<set_value name="$ShortBody" exact="'rotte locali chiuse in emergenza'"/>
+						</do_all>
+						</do_any>
+					<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="$Body"/>
+					<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+					<play_sound object="player.entity" sound="'notification_generic'"/>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Tide]' + ' ' + 'GameAge=\'%1\' Event=\'Tide\' EventAction=\'Wave\' Phase=\'%2\' PhaseStart=\'%3\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $TidePhaseId, $TidePhaseStart]"/>
+				</do_if>
+				<do_else>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Tide]' + ' ' + 'GameAge=\'%1\' Event=\'Tide\' EventAction=\'Wave\' Phase=\'%2\' PhaseStart=\'%3\' Logbook=\'False\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $TidePhaseId, $TidePhaseStart]"/>
+				</do_else>
+			</do_if>
+			</actions>
+		</cue>
+		<!-- Rumor GNN: versione gratuita del feed informativo, con notizie dopo che il pirata viene scoperto -->
+		
+		<!-- Nave pirata scoperta mentre tenta di hackerare una stazione -->
+		<!-- <signal_objects object="player.galaxy" param="EDN__plunder_blown_cover" param2="$target" param3="$pirate_ship"/>-->
+		<cue name="Rumors_Pirate_Raid" instantiate="true">
+			<conditions>
+				<event_object_signalled object="player.galaxy" param="'EDN__plunder_blown_cover'"/>
+			</conditions>
+			<actions>
+				<set_value name="$GameAge" exact="player.age"/>
+				<set_value name="$Target" exact="event.param2"/>
+				<set_value name="$Pirate" exact="event.param3"/>
+				<set_value name="$HeadHunterPresent" exact="global.$HeadHunterWantedTracker?"/>
+				<do_any>
+					<do_all>
+						<set_value name="$Body" exact="'%2 ha emesso una taglia approvata dalla sicurezza del settore per tutti i cacciatori con licenza valida... Bersaglio: %3, ID bersaglio: %5, classe nave bersaglio: %6. La nave e stata avvistata in %1 mentre tentava di rubare il carico da %4. E consentito usare la forza letale. La taglia verra pagata alla prova della distruzione del bersaglio. Promemoria: il bersaglio va scansionato prima di aprire il fuoco.'.[$Target.sector.knownname, $Target.trueowner, $Pirate.knownname, $Target.knownname, $Pirate.idcode, $Pirate.class]"/>
+						<set_value name="$ShortBody" exact="'%1 (%2), classe %3 - furto ai danni di %4'.[$Pirate.knownname, $Pirate.idcode, $Pirate.class, $Target.knownname]"/>
+					</do_all>
+					<do_all>
+						<set_value name="$Body" exact="'Piloti civili in %1, procedete con cautela - un criminale noto e stato avvistato di recente mentre tentava di rubare il carico da %4 nello stesso sistema. La sicurezza del settore ha diffuso i dettagli e ricorda ai cacciatori con una licenza di polizia attiva che la ricompensa viene pagata alla distruzione del bersaglio. Nome di registrazione falsificato: %3, ID nave noto: %5, classe nave nota: %6. Scansione obbligatoria prima di aprire il fuoco.'.[$Target.sector.knownname, $Target.trueowner, $Pirate.knownname, $Target.knownname, $Pirate.idcode, $Pirate.class]"/>
+						<set_value name="$ShortBody" exact="'%1 (%2), classe %3 - furto ai danni di %4'.[$Pirate.knownname, $Pirate.idcode, $Pirate.class, $Target.knownname]"/>
+					</do_all>
+					<do_all>
+						<set_value name="$Body" exact="'ATTENZIONE: criminale noto attivo in %1 con registrazione nave falsificata - %3, ID:%5. I piloti civili e commerciali devono procedere con cautela. I cacciatori con una licenza di polizia valida sono autorizzati a intervenire, ma solo dopo una scansione.'.[$Target.sector.knownname, $Target.trueowner, $Pirate.knownname, $Target.knownname, $Pirate.idcode, $Pirate.class]"/>
+						<set_value name="$ShortBody" exact="'%1 (%2), classe %3 - furto ai danni di %4'.[$Pirate.knownname, $Pirate.idcode, $Pirate.class, $Target.knownname]"/>
+					</do_all>
+					<do_all>
+						<set_value name="$Body" exact="'Tutti i piloti sono invitati a tenere sotto controllo una nave con registrazione falsificata - %3, ID indicato come %5. La nave si e comportata in modo sospetto vicino a %4 in %1 ed e ricercata per sospetto furto di carico.'.[$Target.sector.knownname, $Target.trueowner, $Pirate.knownname, $Target.knownname, $Pirate.idcode, $Pirate.class]"/>
+						<set_value name="$ShortBody" exact="'%1 (%2), classe %3 - furto ai danni di %4'.[$Pirate.knownname, $Pirate.idcode, $Pirate.class, $Target.knownname]"/>
+					</do_all>
+				</do_any>
+				<set_value name="$Ticker" exact="'\033#orange_weak_glow#Sicurezza\033X'" />
+				<set_value name="$Headline" exact="'Taglia emessa in %1'.[$Target.sector.knownname]" />
+				<do_if value="not namespace.static.$PirateFooterByKey?">
+					<set_value name="namespace.static.$PirateFooterByKey" exact="table[]"/>
+				</do_if>
+				<set_value name="$PirateFooterKey" exact="'%1|%2'.[$Pirate.idcode, $Target.sector.knownname]"/>
+				<do_if value="not namespace.static.$PirateLogbookByKey?">
+					<set_value name="namespace.static.$PirateLogbookByKey" exact="table[]"/>
+				</do_if>
+				<set_value name="$PirateLogbookOwnerKey" exact="$Pirate.owner.knownname"/>
+				<do_if value="$Pirate.trueowner and $Pirate.trueowner != faction.ownerless">
+					<set_value name="$PirateLogbookOwnerKey" exact="$Pirate.trueowner.knownname"/>
+				</do_if>
+				<set_value name="$PirateLogbookKey" exact="'%1|%2'.[$Target.sector.knownname, $PirateLogbookOwnerKey]"/>
+				<set_value name="$EmitSecurityNews" exact="false"/>
+				<set_value name="$SecurityNewsKey" exact="'%1|%2|%3'.[$Target.sector.knownname, $Target.knownname, $Pirate.idcode]"/>
+				<do_if value="not namespace.static.$X4NativeIndustryDefenceGate?">
+					<set_value name="namespace.static.$X4NativeIndustryDefenceGate" exact="table[]"/>
+				</do_if>
+				<do_if value="(not namespace.static.$GNNNewsState.$LastByKey.{'security|%1'.[$SecurityNewsKey]}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{'security|%1'.[$SecurityNewsKey]} + 12min) and (not namespace.static.$X4NativeIndustryDefenceGate.$SecurityLastEmit? or player.age gt namespace.static.$X4NativeIndustryDefenceGate.$SecurityLastEmit + 8min)">
+					<set_value name="namespace.static.$GNNNewsState.$LastByKey.{'security|%1'.[$SecurityNewsKey]}" exact="player.age"/>
+					<set_value name="namespace.static.$GNNNewsState.$Recent.{'security|%1'.[$SecurityNewsKey]}" exact="player.age"/>
+					<set_value name="namespace.static.$X4NativeIndustryDefenceGate.$SecurityLastEmit" exact="player.age"/>
+					<set_value name="$EmitSecurityNews" exact="true"/>
+				</do_if>
+				<do_if value="$EmitSecurityNews">
+					<do_if value="not namespace.static.$PirateLogbookByKey.{$PirateLogbookKey}? or player.age gt namespace.static.$PirateLogbookByKey.{$PirateLogbookKey} + 10min">
+						<set_value name="namespace.static.$PirateLogbookByKey.{$PirateLogbookKey}" exact="player.age"/>
+						<write_to_logbook category="tips" title="$Ticker + '-' + $Headline" text="$Body"/>
+					</do_if>
+					<do_if value="not $HeadHunterPresent">
+						<do_if value="not namespace.static.$PirateFooterByKey.{$PirateFooterKey}? or player.age gt namespace.static.$PirateFooterByKey.{$PirateFooterKey} + 10min">
+							<set_value name="namespace.static.$PirateFooterByKey.{$PirateFooterKey}" exact="player.age"/>
+							<show_notification text="$Ticker + ' - ' + $ShortBody" timeout="5s"/>
+							<play_sound object="player.entity" sound="'notification_generic'"/>
+						</do_if>
+					</do_if>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Crime]' + ' ' + 'GameAge=\'%1\' Event=\'Pirate\' EventAction=\'Cover blown\' Target=\'%2\' Sector=\'%3\' Pirate=\'%4\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Target.knownname, $Target.sector.knownname, $Pirate.knownname]"/>
+				</do_if>
+				<do_else>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[Crime]' + ' ' + 'GameAge=\'%1\' Event=\'Pirate\' EventAction=\'Cover blown\' Target=\'%2\' Sector=\'%3\' Pirate=\'%4\' Logbook=\'False\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Target.knownname, $Target.sector.knownname, $Pirate.knownname]"/>
+				</do_else>
+			</actions>
+		</cue>
+	</cues>
+</mdscript>
+
+
+
+
