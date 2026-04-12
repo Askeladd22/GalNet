@@ -1,0 +1,21 @@
+[2026-04-12 18:09:41.8939711] [info] X4Native extension log — gnn_core
+[2026-04-12 18:09:41.8979378] [info] [GNNCore] init
+[2026-04-12 18:09:41.9012869] [info] [GNNCore] build tag = GNNCore hybrid runtime
+[2026-04-12 18:09:41.9044934] [info] [GNNCore] framework version = 0.9.0
+[2026-04-12 18:09:41.9075848] [info] [GNNCore] game version = 9.00
+[2026-04-12 18:09:41.9107548] [info] [GNNCore] extension path = B:\SteamLibrary\steamapps\common\X4 Foundations\extensions\GNN\
+[2026-04-12 18:09:41.9174087] [info] [GNNCore] on_ui_reload
+[2026-04-12 18:09:55.3285862] [info] [GNNCore] on_game_loaded
+[2026-04-12 18:09:55.3318742] [info] [GNNCore] restored market counter = 0
+[2026-04-12 18:09:55.3353301] [info] [GNNCore] restored battle counter = 0
+[2026-04-12 18:09:55.3370778] [info] [GNNCore] market candidate accepted topic=energy_spike sector=Second Contact VII priority=10
+[2026-04-12 18:09:55.3387588] [info] [GNNCore] market candidate discarded topic=hull_surplus sector=Argon Prime priority=5 current_priority=10
+[2026-04-12 18:09:55.3404211] [info] [GNNCore] market candidate replaced topic=factory_shortage sector=Hatikvah's Choice I priority=20 previous_priority=10
+[2026-04-12 18:09:55.3422098] [info] [GNNCore] market candidate emitted topic=factory_shortage sector=Hatikvah's Choice I priority=20
+[2026-04-12 18:09:55.3458768] [info] [GNNCore] structured market emit parsed topic=factory_shortage sector=Hatikvah's Choice I priority=20
+[2026-04-12 18:09:55.3559434] [info] [GNNCore] market story ready topic=factory_shortage | sector=Hatikvah's Choice I | priority=20
+[2026-04-12 18:09:55.3578753] [info] [GNNCore] market logbook payload ready = topic_enc=factory_shortage|sector_enc=Hatikvah%27s%20Choice%20I|priority=20
+[2026-04-12 18:09:55.3615227] [info] [GNNCore] market emit lua event raised payload=factory_shortage|Hatikvah's Choice I|20
+[2026-04-12 18:09:55.3631760] [info] [GNNCore] battle logbook bridge ready (real source: gnn battle md tracker)
+[2026-04-12 18:09:55.3648881] [info] [GNNCore] market counter after load = 1
+[2026-04-12 18:09:55.3665202] [info] [GNNCore] runtime state initialized

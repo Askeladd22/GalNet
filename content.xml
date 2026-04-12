@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<content id="GalNet" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" version="109" date="2026-04-03" save="0" enabled="1">
+	<dependency id="x4native" optional="false" />
+	<text language="7" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia" author="Askeladd" />
+	<text language="33" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia" author="Askeladd" />
+	<text language="34" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" />
+	<text language="39" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" />
+	<text language="44" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" />
+	<text language="49" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" />
+	<text language="55" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" />
+	<text language="81" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" />
+	<text language="82" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" />
+	<text language="86" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" />
+	<text language="88" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" />
+</content>
