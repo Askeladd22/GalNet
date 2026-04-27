@@ -1,8 +1,8 @@
-[2026-04-12 18:07:47.5686774] [info] X4Native extension log — gnn_core
-[2026-04-12 18:07:47.5780086] [info] [GNNCore] init
-[2026-04-12 18:07:47.5812850] [info] [GNNCore] build tag = GNNCore hybrid runtime
-[2026-04-12 18:07:47.5844503] [info] [GNNCore] framework version = 0.9.0
-[2026-04-12 18:07:47.5876062] [info] [GNNCore] game version = 9.00
-[2026-04-12 18:07:47.5908041] [info] [GNNCore] extension path = B:\SteamLibrary\steamapps\common\X4 Foundations\extensions\GNN\
-[2026-04-12 18:07:47.5973326] [info] [GNNCore] on_ui_reload
-[2026-04-12 18:09:41.8686628] [info] [GNNCore] shutdown
+[2026-04-27 14:30:55.7328731] [info] X4Native extension log — gnn_core
+[2026-04-27 14:30:55.7377829] [info] [GNNCore] init
+[2026-04-27 14:30:55.7502912] [info] [GNNCore] build tag = GNNCore hybrid runtime
+[2026-04-27 14:30:55.7536545] [info] [GNNCore] framework version = 0.9.0
+[2026-04-27 14:30:55.7568889] [info] [GNNCore] game version = 9.00
+[2026-04-27 14:30:55.7600859] [info] [GNNCore] extension path = B:\SteamLibrary\steamapps\common\X4 Foundations\extensions\GNN\
+[2026-04-27 14:30:55.7661627] [info] [GNNCore] on_ui_reload
+[2026-04-27 14:32:18.8015265] [info] [GNNCore] shutdown

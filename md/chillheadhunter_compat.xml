@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mdscript name="GNN_ChillHeadHunter_Compat" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="md.xsd">
+	<cues>
+		<!-- Compat GNN: spegne i feed live rumorosi di ChillHeadHunter senza toccare la mod esterna. -->
+		<cue name="ChillHeadHunter_Compat" instantiate="true">
+			<conditions>
+				<check_any>
+					<event_game_started/>
+					<event_game_loaded/>
+				</check_any>
+			</conditions>
+			<delay exact="10s"/>
+			<actions>
+				<do_if value="global.$HeadHunterWantedTracker?">
+					<set_value name="global.$HeadHunterProximityNotify" exact="false"/>
+					<set_value name="global.$HeadHunterPayoutNotify" exact="false"/>
+					<debug_text text="'GNN compat: ChillHeadHunter live notifications disabled.'" filter="scripts"/>
+				</do_if>
+			</actions>
+		</cue>
+	</cues>
+</mdscript>
