@@ -693,7 +693,7 @@
 							<set_value name="namespace.static.$MarketFooterByKey.{$MarketFooterKey}" exact="player.age"/>
 						<do_if value="not namespace.static.$LastMarketFooterLight? or player.age gt namespace.static.$LastMarketFooterLight + 20min">
 							<set_value name="namespace.static.$LastMarketFooterLight" exact="player.age"/>
-							<show_notification text="'%s\n%s\n%s'.[$FooterHeader, $DefenceFooterHeadline, $LiveBody]" timeout="5s"/>
+							<show_notification text="'%s\n%s'.[$FooterHeader, $DefenceFooterHeadline]" timeout="5s"/>
 						</do_if>
 					</do_if>
 					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[FactionMilitary]' + ' ' + 'GameAge=\'%1\' Event=\'StationConstruction\' EventAction=\'Defence buildup\' Sector=\'%2\' Faction=\'%3\' Station=\'%4\' Logbook=\'True\' FeedType=\\'Galaxy News Network\\' '.[$GameAge, $Sector, $Faction.knownname, $Station.knownname]"/>
@@ -709,37 +709,32 @@
 		<cue name="Battle_Track_Destroyed_Object" instantiate="true">
 			<conditions>
 				<event_object_destroyed/>
-				<!-- Origini battaglia verificate: event.object.sector, event.object.owner/trueowner e payload killer. -->
-				<check_value value="event.object.sector"/>
-				<check_value value="event.object.owner or event.object.trueowner"/>
-				<check_value value="event.param"/>
-				<check_any>
-					<check_all>
-						<check_value value="event.object.isrealclass.station"/>
-						<check_value value="not event.object.isclass.buildstorage"/>
-					</check_all>
-					<check_all>
-						<check_value value="event.object.isrealclass.ship"/>
-						<check_value value="not event.object.ismasstraffic"/>
-						<check_value value="not event.object.isdeployable"/>
-						<check_value value="not event.object.isclass.buildstorage"/>
-						<!-- Filtro civile verificato: scarta il traffico minore, tieni navi militari o civili grandi. -->
-						<check_any>
-							<check_value value="event.object.owner != faction.civilian"/>
-							<check_value value="event.object.isclass.ship_m or event.object.isclass.ship_l or event.object.isclass.ship_xl"/>
-							<check_all>
-								<check_value value="event.object.isclass.ship_s"/>
-								<check_value value="event.object.trueowner and event.object.trueowner != faction.ownerless"/>
-							</check_all>
-						</check_any>
-					</check_all>
-					<check_all>
-						<check_value value="event.object.isclass.defensible"/>
-						<check_value value="not event.object.isclass.buildstorage"/>
-					</check_all>
-				</check_any>
 			</conditions>
 			<actions>
+				<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Entry Object=' + event.object + ' ObjectExists=' + event.object.exists"/>
+				<do_if value="event.object.exists">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.ObjectOK Object=' + event.object + ' ObjectName=' + event.object.knownname + ' Owner=' + event.object.owner + ' Sector=' + event.object.sector + ' Class=' + event.object.class"/>
+				</do_if>
+				<do_else>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=NoObject Object=' + event.object + ' ObjectExists=' + event.object.exists"/>
+					<return/>
+				</do_else>
+				<do_if value="not event.object.sector">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=NoSector Object=' + event.object + ' ObjectName=' + event.object.knownname + ' Class=' + event.object.class"/>
+					<return/>
+				</do_if>
+				<do_if value="not (event.object.owner or event.object.trueowner)">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=NoOwner Object=' + event.object + ' ObjectName=' + event.object.knownname + ' Sector=' + event.object.sector + ' Class=' + event.object.class"/>
+					<return/>
+				</do_if>
+				<do_if value="not ((event.object.isrealclass.station and not event.object.isclass.buildstorage) or (event.object.isrealclass.ship and not event.object.ismasstraffic and not event.object.isdeployable and not event.object.isclass.buildstorage and (event.object.owner != faction.civilian or event.object.isclass.ship_m or event.object.isclass.ship_l or event.object.isclass.ship_xl or (event.object.isclass.ship_s and event.object.trueowner and event.object.trueowner != faction.ownerless))) or (event.object.isclass.defensible and not event.object.isclass.buildstorage))">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=UnsupportedClass Object=' + event.object + ' Sector=' + event.object.sector + ' Owner=' + event.object.owner + ' ObjectClass=' + event.object.class"/>
+					<return/>
+				</do_if>
+				<do_if value="not event.param">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=NoEnemyFaction Object=' + event.object + ' Sector=' + event.object.sector + ' Owner=' + event.object.owner + ' ObjectClass=' + event.object.class + ' EventParam=' + event.param"/>
+					<return/>
+				</do_if>
 				<do_if value="not namespace.static.$BattleReports?">
 					<set_value name="namespace.static.$BattleReports" exact="table[]"/>
 				</do_if>
@@ -771,17 +766,22 @@
 					<set_value name="$BattleKillerFaction" exact="$BattleKillerObject.trueowner"/>
 				</do_if>
 				<do_if value="$BattleVictimFaction == faction.ownerless">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=NoFaction Object=' + event.object + ' Sector=' + $BattleSector + ' Owner=' + $BattleVictimFaction + ' ObjectClass=' + event.object.class"/>
 					<return/>
 				</do_if>
 				<do_if value="not $BattleKillerFaction?">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=NoEnemyFaction Object=' + event.object + ' Sector=' + $BattleSector + ' FactionA=' + $BattleVictimFaction + ' ObjectClass=' + event.object.class + ' EventParam=' + event.param"/>
 					<return/>
 				</do_if>
 				<do_if value="$BattleKillerFaction == faction.ownerless">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=NoEnemyFaction Object=' + event.object + ' Sector=' + $BattleSector + ' FactionA=' + $BattleVictimFaction + ' ObjectClass=' + event.object.class + ' EventParam=' + event.param"/>
 					<return/>
 				</do_if>
 				<do_if value="$BattleVictimFaction == $BattleKillerFaction">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=NoEnemyFaction Object=' + event.object + ' Sector=' + $BattleSector + ' FactionA=' + $BattleVictimFaction + ' FactionB=' + $BattleKillerFaction + ' ObjectClass=' + event.object.class"/>
 					<return/>
 				</do_if>
+				<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Factions Sector=' + $BattleSector + ' FactionA=' + $BattleVictimFaction + ' FactionB=' + $BattleKillerFaction + ' ObjectClass=' + event.object.class"/>
 				<!-- Coppia canonica verificata: tabella a due voci, chiavi ordinate e nomi di fazione riusati. -->
 				<set_value name="$BattlePairTable" exact="table[$BattleVictimFaction.knownname = $BattleVictimFaction, $BattleKillerFaction.knownname = $BattleKillerFaction]"/>
 				<set_value name="$BattlePairKeys" exact="$BattlePairTable.keys.sorted"/>
@@ -790,6 +790,11 @@
 				<set_value name="$BattleFactionA" exact="$BattlePairTable.{$BattleFactionAKey}"/>
 				<set_value name="$BattleFactionB" exact="$BattlePairTable.{$BattleFactionBKey}"/>
 				<set_value name="$BattleKey" exact="'%1|%2|%3'.[$BattleSector.knownname, $BattleFactionAKey, $BattleFactionBKey]"/>
+				<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.BattleKey BattleKey=' + $BattleKey"/>
+				<do_if value="not $BattleKey">
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=NoBattleKey Sector=' + $BattleSector + ' FactionA=' + $BattleFactionA + ' FactionB=' + $BattleFactionB"/>
+					<return/>
+				</do_if>
 				<set_value name="$BattleReportWasNew" exact="not namespace.static.$BattleReports.{$BattleKey}?"/>
 				<set_value name="$BattleReportLastUpdate" exact="false"/>
 				<do_if value="namespace.static.$BattleReports.{$BattleKey}?">
@@ -819,6 +824,7 @@
 				<do_elseif value="event.object.isclass.defensible and not event.object.isrealclass.ship">
 					<set_value name="$LossScore" exact="8"/>
 				</do_elseif>
+				<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Weight ObjectClass=' + event.object.class + ' Weight=' + $LossScore"/>
 				<!-- Assegnazione perdite: il punteggio va al lato canonico della fazione distrutta. -->
 				<do_if value="$BattleVictimFaction == $BattleFactionA">
 				<set_value name="namespace.static.$BattleReports.{$BattleKey}.$SideAScore" exact="namespace.static.$BattleReports.{$BattleKey}.$SideAScore + $LossScore"/>
@@ -835,6 +841,9 @@
 				<do_if value="namespace.static.$BattleReports.{$BattleKey}.$Score ge 3">
 					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleTrace]' + ' ' + 'Stage=\'TrackDestroyed.Update\' BattleKey=\'%1\' Score=\'%2\' New=\'%3\''.[ $BattleKey, $BattleScore, $BattleReportWasNew ]"/>
 				</do_if>
+				<do_else>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="'[BattleTrace] Stage=TrackDestroyed.Drop Reason=ScoreBelowThreshold BattleKey=' + $BattleKey + ' Score=' + namespace.static.$BattleReports.{$BattleKey}.$Score + ' Weight=' + $LossScore"/>
+				</do_else>
 				<do_if value="$BattleReportWasNew or not $BattleReportLastUpdate? or player.age gt $BattleReportLastUpdate + 20min">
 					<signal_cue_instantly cue="Battle_Sector_Under_Attack" param="$BattleKey"/>
 				</do_if>
@@ -972,8 +981,8 @@
 						<set_value name="$ShortBody" exact="'vigilanza istituzionale'"/>
 					</do_all>
 					</do_any>
-					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleTrace]' + ' ' + 'Stage=\'OpenHeadline.RaiseLuaEvent\' BattleKey=\'%1\' Score=\'%2\' StoryType=\'%3\''.[ $BattleKey, $BattleScore, $BattleStoryType ]"/>
-					<raise_lua_event name="'gnn.battle.story.emit'" param="'type=%1|sector=%2|faction_a=%3|faction_b=%4|severity=%5'.[$BattleStoryType, $BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleScore]"/>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleTrace]' + ' ' + 'Stage=\'OpenHeadline.RaiseLuaEvent\' Event=gnn.battle.emit BattleKey=\'%1\' Score=\'%2\' StoryType=\'%3\''.[ $BattleKey, $BattleScore, $BattleStoryType ]"/>
+					<raise_lua_event name="'gnn.battle.emit'" param="'type=%1|sector=%2|faction_a=%3|faction_b=%4|severity=%5'.[$BattleStoryType, $BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleScore]"/>
 				</do_if>
 			</actions>
 		</cue>
@@ -1046,8 +1055,8 @@
 						<set_value name="$ShortBody" exact="'emergenza operativa dichiarata'"/>
 					</do_all>
 					</do_any>
-					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleTrace]' + ' ' + 'Stage=\'EscalationHeadline.RaiseLuaEvent\' BattleKey=\'%1\' Score=\'%2\''.[ $BattleKey, $BattleScore ]"/>
-					<raise_lua_event name="'gnn.battle.story.emit'" param="'type=battle_escalation|sector=%1|faction_a=%2|faction_b=%3|severity=%4'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleScore]"/>
+					<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleTrace]' + ' ' + 'Stage=\'EscalationHeadline.RaiseLuaEvent\' Event=gnn.battle.emit BattleKey=\'%1\' Score=\'%2\''.[ $BattleKey, $BattleScore ]"/>
+					<raise_lua_event name="'gnn.battle.emit'" param="'type=battle_escalation|sector=%1|faction_a=%2|faction_b=%3|severity=%4'.[$BattleSector.knownname, $BattleFactionA.knownname, $BattleFactionB.knownname, $BattleScore]"/>
 						</do_if>
 					</actions>
 				</cue>
@@ -2071,6 +2080,7 @@
 					<do_if value="not namespace.static.$X4NativeGnnBattleLogbookLastByKey.{$LogbookKey}? or player.age gt namespace.static.$X4NativeGnnBattleLogbookLastByKey.{$LogbookKey} + 10min">
 						<set_value name="namespace.static.$X4NativeGnnBattleLogbookLastByKey.{$LogbookKey}" exact="player.age"/>
 						<write_to_logbook category="tips" title="$Title" text="$Text"/>
+						<debug_to_file name="'gnnlog.log'" directory="'gnn'" text="player.systemtime.{'%Y-%m-%d %H:%M:%S'} + ' ' + '[BattleTrace]' + ' ' + 'Stage=\'X4Native_Battle_Logbook_Render.Publish\' Type=\'%1\' Sector=\'%2\' FactionA=\'%3\' FactionB=\'%4\' Severity=\'%5\''.[ $Type, $Sector, $FactionA, $FactionB, $Severity ]"/>
 						<set_value name="namespace.static.$GNNEditorialLastHighPriority" exact="player.age"/>
 					</do_if>
 				</do_if>
@@ -2270,7 +2280,7 @@
 							<set_value name="$ShortBody" exact="'raffinazione di %1 sotto pressione'.[$SafeWare]"/>
 						</do_all>
 						<do_all>
-							<set_value name="$Body" exact="'Fonti riservate indicano un possibile rialzo dei prezzi minerari. Gli analisti attendono conferme dai volumi di raffinazione prima di parlare di inversione stabile.'"/>
+							<set_value name="$Body" exact="'Fonti riservate indicano un possibile rialzo dei prezzi di %1 presso %2. Gli analisti attendono conferme dai volumi di raffinazione prima di parlare di inversione stabile.'.[$SafeWare, $SafeRequester]"/>
 							<set_value name="$ShortBody" exact="'prezzi di %1 in rialzo'.[$SafeWare]"/>
 						</do_all>
 					</do_any>
@@ -2313,7 +2323,10 @@
 				</do_else>
 				<set_value name="$Ticker" exact="'\033#amber_moderate_glow#Affari Centrali\033X'" />
 				<set_value name="$CategoryLabel" exact="'Affari Centrali'"/>
-				<set_value name="$Headline" exact="'Filiera locale sotto stress a %1'.[$Requester.knownname]" />
+				<set_value name="$Headline" exact="'Domanda di %1 in aumento a %2'.[$SafeWare, $SafeRequester]" />
+				<do_if value="$Ware.hastag.minable">
+					<set_value name="$Headline" exact="'Carenza di %1 segnalata a %2'.[$SafeWare, $SafeRequester]"/>
+				</do_if>
 				<set_value name="$SafeDeskName" exact="'Redazione GNN'"/>
 				<do_if value="$CategoryLabel == 'Affari Centrali'">
 					<set_value name="$SafeDeskName" exact="'Yoyunis Tertasobas Zusilas IV'"/>
@@ -2334,12 +2347,10 @@
 					<set_value name="$SafeDeskName" exact="namespace.static.$GNNDeskByCategory.{$CategoryLabel}"/>
 				</do_elseif>
 				<set_value name="$FooterHeader" exact="'%s | %s'.[$CategoryLabel, $SafeDeskName]"/>
-				<set_value name="$SafeWare" exact="'merce sconosciuta'"/>
-				<do_if value="$Ware">
-					<set_value name="$SafeWare" exact="$Ware"/>
-				</do_if>
 				<set_value name="$EmitNews" exact="false"/>
-				<set_value name="$MarketFactoryNewsKey" exact="'market|factory|%1|%2'.[$Ware, $Faction.knownname]"/>
+				<set_value name="$MarketFactoryNewsKey" exact="'market|factory|%1|%2|%3'.[$Ware, $Requester.knownname, $Faction.knownname]"/>
+				<set_value name="$MarketFactoryWareNewsKey" exact="'market|factory-ware|%1'.[$Ware]"/>
+				<set_value name="$MarketFactorySectorNewsKey" exact="'market|factory-sector|%1'.[$Requester.knownname]"/>
 				<set_value name="$MarketBurstKey" exact="'factory|%1'.[$Ware]"/>
 				<run_actions ref="GNN_CanPublishMarket" result="$CanPublishMarket">
 					<param name="MarketType" value="'factory'"/>
@@ -2355,6 +2366,13 @@
 					<set_value name="namespace.static.$MarketFactoryBurstByWare.{$MarketBurstKey}.$Last" exact="player.age"/>
 				</do_else>
 				<set_value name="$MarketBurstCount" exact="namespace.static.$MarketFactoryBurstByWare.{$MarketBurstKey}.$Count"/>
+				<set_value name="$MarketFactoryLiveEligible" exact="true"/>
+				<do_if value="$Ware.hastag.minable and $MarketBurstCount lt 3">
+					<set_value name="$MarketFactoryLiveEligible" exact="false"/>
+				</do_if>
+				<do_if value="($Ware.hastag.energy or $Ware.hastag.food or $Ware.hastag.medical) and $MarketBurstCount lt 3">
+					<set_value name="$MarketFactoryLiveEligible" exact="false"/>
+				</do_if>
 				<do_if value="not namespace.static.$GNNNewsState.$LastCleanup? or player.age gt namespace.static.$GNNNewsState.$LastCleanup + 30min">
 					<do_if value="namespace.static.$GNNNewsState.$LastByKey.keys.count">
 						<set_value name="$GNNNewsCleanupKeys" exact="namespace.static.$GNNNewsState.$LastByKey.keys.sorted"/>
@@ -2368,17 +2386,19 @@
 					</do_if>
 					<set_value name="namespace.static.$GNNNewsState.$LastCleanup" exact="player.age"/>
 				</do_if>
-				<do_if value="$CanPublishMarket and (not namespace.static.$GNNNewsState.$LastByKey.{$MarketFactoryNewsKey}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{$MarketFactoryNewsKey} + 25min)">
+				<do_if value="$CanPublishMarket and (not namespace.static.$GNNNewsState.$LastByKey.{$MarketFactoryNewsKey}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{$MarketFactoryNewsKey} + 30min) and (not namespace.static.$GNNNewsState.$LastByKey.{$MarketFactoryWareNewsKey}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{$MarketFactoryWareNewsKey} + 30min) and (not namespace.static.$GNNNewsState.$LastByKey.{$MarketFactorySectorNewsKey}? or player.age gt namespace.static.$GNNNewsState.$LastByKey.{$MarketFactorySectorNewsKey} + 30min)">
 					<set_value name="namespace.static.$GNNNewsState.$LastByKey.{$MarketFactoryNewsKey}" exact="player.age"/>
+					<set_value name="namespace.static.$GNNNewsState.$LastByKey.{$MarketFactoryWareNewsKey}" exact="player.age"/>
+					<set_value name="namespace.static.$GNNNewsState.$LastByKey.{$MarketFactorySectorNewsKey}" exact="player.age"/>
 					<set_value name="namespace.static.$GNNNewsState.$Recent.{$MarketFactoryNewsKey}" exact="player.age"/>
 					<set_value name="$EmitNews" exact="true"/>
 				</do_if>
 				<do_if value="$EmitNews">
 					<set_value name="$LogbookTitle" exact="$Headline"/>
-					<set_value name="$LogbookText" exact="'Desk di Yoyunis Tertasobas Zusilas IV - mercati e industria. ' + $Body"/>
+					<set_value name="$LogbookText" exact="'Desk di Yoyunis Tertasobas Zusilas IV - mercati e industria. ' + $Body + ' Opportunita commerciale: rifornire %2 con %1 puo offrire margini se i prezzi locali confermano la carenza nello spazio %3.'.[$SafeWare, $SafeRequester, $SafeFaction]"/>
 					<do_if value="$IsPlayerOperational">
 					<set_value name="$LogbookTitle" exact="'Rapporto operativo: %1 a %2'.[$Ware, $Requester.knownname]"/>
-						<set_value name="$LogbookText" exact="'Rapporto operativo interno: ' + $Body"/>
+						<set_value name="$LogbookText" exact="'Rapporto operativo interno: ' + $Body + ' Ware coinvolta: %1; area: %2; fazione: %3.'.[$SafeWare, $SafeRequester, $SafeFaction]"/>
 					</do_if>
 					<write_to_logbook category="tips" title="$LogbookTitle" text="$LogbookText"/>
 					<set_value name="namespace.static.$GNNEditorialLastMarket" exact="player.age"/>
@@ -2389,12 +2409,17 @@
 							<set_value name="namespace.static.$MarketFooterByKey" exact="table[]"/>
 						</do_if>
 						<set_value name="$MarketFooterKey" exact="'factory-live|%1'.[$Ware]"/>
-						<set_value name="$MarketFactoryFooterHeadline" exact="'Filiera locale sotto stress a %1'.[$Requester.knownname]"/>
+						<set_value name="$MarketFactorySectorFooterKey" exact="'factory-live-sector|%1'.[$Requester.knownname]"/>
+						<set_value name="$MarketFactoryFooterHeadline" exact="'Domanda di %1 in aumento a %2'.[$SafeWare, $SafeRequester]"/>
+						<do_if value="$Ware.hastag.minable">
+							<set_value name="$MarketFactoryFooterHeadline" exact="'Carenza di %1 segnalata a %2'.[$SafeWare, $SafeRequester]"/>
+						</do_if>
 						<set_value name="$MarketFactoryFooterHeadlineKey" exact="'factory-live-headline|%1'.[$MarketFactoryFooterHeadline]"/>
-						<do_if value="(not namespace.static.$LastMarketFooterLight? or player.age gt namespace.static.$LastMarketFooterLight + 20min) and (not namespace.static.$GNNFactoryLiveLast? or player.age gt namespace.static.$GNNFactoryLiveLast + 20min) and (not namespace.static.$MarketFooterByKey.{$MarketFooterKey}? or player.age gt namespace.static.$MarketFooterByKey.{$MarketFooterKey} + 45min) and (not namespace.static.$MarketFooterByKey.{$MarketFactoryFooterHeadlineKey}? or player.age gt namespace.static.$MarketFooterByKey.{$MarketFactoryFooterHeadlineKey} + 60min)">
+						<do_if value="$MarketFactoryLiveEligible and (not namespace.static.$LastMarketFooterLight? or player.age gt namespace.static.$LastMarketFooterLight + 20min) and (not namespace.static.$GNNFactoryLiveLast? or player.age gt namespace.static.$GNNFactoryLiveLast + 20min) and (not namespace.static.$MarketFooterByKey.{$MarketFooterKey}? or player.age gt namespace.static.$MarketFooterByKey.{$MarketFooterKey} + 45min) and (not namespace.static.$MarketFooterByKey.{$MarketFactorySectorFooterKey}? or player.age gt namespace.static.$MarketFooterByKey.{$MarketFactorySectorFooterKey} + 30min) and (not namespace.static.$MarketFooterByKey.{$MarketFactoryFooterHeadlineKey}? or player.age gt namespace.static.$MarketFooterByKey.{$MarketFactoryFooterHeadlineKey} + 60min)">
 							<set_value name="namespace.static.$LastMarketFooterLight" exact="player.age"/>
 							<set_value name="namespace.static.$GNNFactoryLiveLast" exact="player.age"/>
 							<set_value name="namespace.static.$MarketFooterByKey.{$MarketFooterKey}" exact="player.age"/>
+							<set_value name="namespace.static.$MarketFooterByKey.{$MarketFactorySectorFooterKey}" exact="player.age"/>
 							<set_value name="namespace.static.$MarketFooterByKey.{$MarketFactoryFooterHeadlineKey}" exact="player.age"/>
 							<show_notification text="'%s\n%s'.[$FooterHeader, $MarketFactoryFooterHeadline]" timeout="5s"/>
 							<set_value name="namespace.static.$MarketFactoryBurstByWare.{$MarketBurstKey}.$Count" exact="0"/>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<diff>
+  <add sel="/wares">
+    <ware id="slaves" name="{990100,1}" description="{990100,2}" factoryname="{990100,3001}" group="pharmaceutical" transport="container" volume="2" illegal="alliance antigone argon boron court holyorder holyorderfanatic ministry paranid pioneers terran trinity" tags="container economy">
+      <price min="702" average="1404" max="2106" />
+      <production time="1080" amount="10" method="default" name="{990100,1101}">
+        <primary>
+          <ware ware="energycells" amount="50" />
+          <ware ware="spices" amount="15" />
+          <ware ware="water" amount="35" />
+          <ware ware="medicalsupplies" amount="20" />
+        </primary>
+        <effects>
+          <effect type="work" product="0.5" />
+        </effects>
+      </production>
+      <icon active="ware_spacefuel" video="ware_spacefuel_macro" />
+    </ware>
+
+    <ware id="module_spl_prod_strafkolonie_01" name="{990100,2001}" description="{990100,2002}" transport="container" volume="1" tags="module">
+      <price min="6000000" average="7500000" max="9000000" />
+      <production time="867" amount="1" method="default" name="{990100,2101}">
+        <primary>
+          <ware ware="claytronics" amount="639" />
+          <ware ware="energycells" amount="1277" />
+          <ware ware="hullparts" amount="2338" />
+        </primary>
+      </production>
+      <research time="10">
+        <research>
+          <ware ware="research_module_production" />
+        </research>
+      </research>
+      <component ref="prod_spl_strafkolonie_macro" amount="1" />
+      <restriction licence="station_gen_basic" />
+      <owner faction="split" />
+      <owner faction="freesplit" />
+      <owner faction="scaleplate" />
+    </ware>
+  </add>
+</diff>

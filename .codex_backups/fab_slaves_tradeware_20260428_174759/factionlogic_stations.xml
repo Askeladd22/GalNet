@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<diff>
+  <add sel="/mdscript/cues/library[@name='Manage_Stations']/cues/cue[@name='Process']/cues/cue[@name='Analyse_Stations']/actions/remove_value[@name='$StationDefinitions']" pos="before">
+    <!-- Penal colony station management backstop. GOD stays active, but this keeps target counts stable in map-modded saves. -->
+    <set_value name="$PrisonStationCount" exact="0"/>
+    <set_value name="$DesiredPrisonStations" exact="0"/>
+    <set_value name="$PrisonsToBuild" exact="0"/>
+
+    <do_if value="$Faction == faction.split">
+      <set_value name="$DesiredPrisonStations" exact="2"/>
+    </do_if>
+    <do_elseif value="$Faction == faction.freesplit">
+      <set_value name="$DesiredPrisonStations" exact="1"/>
+    </do_elseif>
+    <do_elseif value="$Faction == faction.scaleplate">
+      <set_value name="$DesiredPrisonStations" exact="1"/>
+    </do_elseif>
+
+    <do_if value="$DesiredPrisonStations gt 0">
+      <find_station_by_true_owner name="$FactionStations_All" faction="$Faction" space="player.galaxy" multiple="true" checkoperational="false"/>
+      <do_all exact="$FactionStations_All.count" counter="$ps_i">
+        <set_value name="$Station" exact="$FactionStations_All.{$ps_i}"/>
+        <set_value name="$HasPrisonModule" exact="false"/>
+        <do_all exact="$Station.productions.count" counter="$pm_i">
+          <do_if value="$Station.productions.{$pm_i}.macro == macro.prod_spl_strafkolonie_macro">
+            <set_value name="$HasPrisonModule" exact="true"/>
+            <break/>
+          </do_if>
+        </do_all>
+        <do_if value="$HasPrisonModule">
+          <set_value name="$PrisonStationCount" operation="add"/>
+        </do_if>
+      </do_all>
+
+      <do_if value="$PrisonStationCount lt $DesiredPrisonStations">
+        <debug_text text="$DebugText + 'Has ' + $PrisonStationCount + ' penal colonies but desires ' + $DesiredPrisonStations" chance="$DebugChance" context="false"/>
+        <set_value name="$PrisonsToBuild" exact="1" chance="10"/>
+
+        <do_if value="$PrisonsToBuild gt 0">
+          <set_value name="$SpawnSectors" exact="[]"/>
+          <find_sector name="$OwnedPrisonSectors" owner="$Faction" multiple="true"/>
+          <do_if value="$OwnedPrisonSectors.count">
+            <append_list_elements name="$SpawnSectors" other="$OwnedPrisonSectors"/>
+          </do_if>
+          <do_elseif value="$RelevantSectors.count">
+            <append_list_elements name="$SpawnSectors" other="$RelevantSectors"/>
+          </do_elseif>
+
+          <do_if value="$SpawnSectors.count">
+            <set_value name="$ChosenSector" exact="$SpawnSectors.random"/>
+            <include_actions ref="GetRandomCorePosition_1"/>
+            <set_value name="$PrisonPlan" exact="if $Faction == faction.scaleplate then 'fab_sca_strafkolonie' else 'fab_spl_strafkolonie'"/>
+            <set_value name="$PrisonName" exact="if $Faction == faction.scaleplate then {990100,4003} else if $Faction == faction.freesplit then {990100,4002} else {990100,4001}"/>
+
+            <create_station name="$NewPrison" sector="$ChosenSector" owner="$Faction" macro="macro.station_gen_factory_base_01_macro" rawname="$PrisonName" state="componentstate.operational" constructionplan="$PrisonPlan">
+              <safepos value="$Position" allowyaxis="false" includeplotbox="true"/>
+            </create_station>
+
+            <do_if value="$NewPrison">
+              <signal_objects object="player.galaxy" param="'init station'" param2="$NewPrison" param3="false"/>
+              <add_default_production_wares object="$NewPrison" lowerlimit="10" upperlimit="10"/>
+              <debug_text text="$DebugText + 'Spawned penal colony ' + $NewPrison.knownname + ' in ' + $ChosenSector.knownname" chance="$DebugChance" context="false"/>
+            </do_if>
+          </do_if>
+        </do_if>
+      </do_if>
+    </do_if>
+  </add>
+</diff>

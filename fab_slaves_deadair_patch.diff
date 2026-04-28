@@ -1,0 +1,476 @@
+﻿diff --git a/extensions/fab_slaves_tradeware/libraries/modules.xml b/extensions/fab_slaves_tradeware/libraries/modules.xml
+--- a/extensions/fab_slaves_tradeware/libraries/modules.xml
++++ b/extensions/fab_slaves_tradeware/libraries/modules.xml
+@@ -1,17 +1,17 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<diff>
+-  <add sel="/modules/module[last()]" pos="after">
+-    <module id="prod_spl_strafkolonie_split" group="prod_spl_strafkolonie">
+-      <category ware="slaves" tags="[production, module]" race="split" faction="[split, freesplit, court]" />
+-      <compatibilities>
+-        <production ware="slaves" chance="100" />
+-      </compatibilities>
+-    </module>
+-    <module id="prod_spl_strafkolonie_teladi" group="prod_spl_strafkolonie">
+-      <category ware="slaves" tags="[production, module]" race="teladi" faction="[teladi, ministry, scaleplate]" />
+-      <compatibilities>
+-        <production ware="slaves" chance="100" />
+-      </compatibilities>
+-    </module>
+-  </add>
+-</diff>
++<?xml version="1.0" encoding="utf-8"?>
++<diff>
++  <add sel="/modules/module[last()]" pos="after">
++    <module id="prod_spl_strafkolonie_split" group="prod_spl_strafkolonie">
++      <category ware="slaves" tags="[production, module]" race="split" faction="[split, freesplit, court, fallensplit]" />
++      <compatibilities>
++        <production ware="slaves" chance="100" />
++      </compatibilities>
++    </module>
++    <module id="prod_spl_strafkolonie_teladi" group="prod_spl_strafkolonie">
++      <category ware="slaves" tags="[production, module]" race="[argon, paranid, teladi, terran]" faction="[teladi, ministry, scaleplate, loanshark, yaki, buccaneers]" />
++      <compatibilities>
++        <production ware="slaves" chance="100" />
++      </compatibilities>
++    </module>
++  </add>
++</diff>
+
+diff --git a/extensions/fab_slaves_tradeware/libraries/wares.xml b/extensions/fab_slaves_tradeware/libraries/wares.xml
+--- a/extensions/fab_slaves_tradeware/libraries/wares.xml
++++ b/extensions/fab_slaves_tradeware/libraries/wares.xml
+@@ -1,41 +1,45 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<diff>
+-  <add sel="/wares">
+-    <ware id="slaves" name="{990100,1}" description="{990100,2}" factoryname="{990100,3001}" group="pharmaceutical" transport="container" volume="2" illegal="alliance antigone argon boron court holyorder holyorderfanatic ministry paranid pioneers terran trinity" tags="container economy">
+-      <price min="702" average="1404" max="2106" />
+-      <production time="1080" amount="10" method="default" name="{990100,1101}">
+-        <primary>
+-          <ware ware="energycells" amount="50" />
+-          <ware ware="spices" amount="15" />
+-          <ware ware="water" amount="35" />
+-          <ware ware="medicalsupplies" amount="20" />
+-        </primary>
+-        <effects>
+-          <effect type="work" product="0.5" />
+-        </effects>
+-      </production>
+-      <icon active="ware_spacefuel" video="ware_spacefuel_macro" />
+-    </ware>
+-
+-    <ware id="module_spl_prod_strafkolonie_01" name="{990100,2001}" description="{990100,2002}" transport="container" volume="1" tags="module">
+-      <price min="6000000" average="7500000" max="9000000" />
+-      <production time="867" amount="1" method="default" name="{990100,2101}">
+-        <primary>
+-          <ware ware="claytronics" amount="639" />
+-          <ware ware="energycells" amount="1277" />
+-          <ware ware="hullparts" amount="2338" />
+-        </primary>
+-      </production>
+-      <research time="10">
+-        <research>
+-          <ware ware="research_module_production" />
+-        </research>
+-      </research>
+-      <component ref="prod_spl_strafkolonie_macro" amount="1" />
+-      <restriction licence="station_gen_basic" />
+-      <owner faction="split" />
+-      <owner faction="freesplit" />
+-      <owner faction="scaleplate" />
+-    </ware>
+-  </add>
+-</diff>
++<?xml version="1.0" encoding="utf-8"?>
++<diff>
++  <add sel="/wares">
++    <ware id="slaves" name="{990100,1}" description="{990100,2}" factoryname="{990100,3001}" group="pharmaceutical" transport="container" volume="2" illegal="alliance antigone argon boron court holyorder holyorderfanatic ministry paranid pioneers terran trinity" tags="container economy">
++      <price min="702" average="1404" max="2106" />
++      <production time="1080" amount="10" method="default" name="{990100,1101}">
++        <primary>
++          <ware ware="energycells" amount="50" />
++          <ware ware="spices" amount="15" />
++          <ware ware="water" amount="35" />
++          <ware ware="medicalsupplies" amount="20" />
++        </primary>
++        <effects>
++          <effect type="work" product="0.5" />
++        </effects>
++      </production>
++      <icon active="ware_spacefuel" video="ware_spacefuel_macro" />
++    </ware>
++
++    <ware id="module_spl_prod_strafkolonie_01" name="{990100,2001}" description="{990100,2002}" transport="container" volume="1" tags="module">
++      <price min="6000000" average="7500000" max="9000000" />
++      <production time="867" amount="1" method="default" name="{990100,2101}">
++        <primary>
++          <ware ware="claytronics" amount="639" />
++          <ware ware="energycells" amount="1277" />
++          <ware ware="hullparts" amount="2338" />
++        </primary>
++      </production>
++      <research time="10">
++        <research>
++          <ware ware="research_module_production" />
++        </research>
++      </research>
++      <component ref="prod_spl_strafkolonie_macro" amount="1" />
++      <restriction licence="station_gen_basic" />
++      <owner faction="split" />
++      <owner faction="freesplit" />
++      <owner faction="fallensplit" />
++      <owner faction="scaleplate" />
++      <owner faction="loanshark" />
++      <owner faction="yaki" />
++      <owner faction="buccaneers" />
++    </ware>
++  </add>
++</diff>
+
+diff --git a/extensions/fab_slaves_tradeware/md/factionlogic_stations.xml b/extensions/fab_slaves_tradeware/md/factionlogic_stations.xml
+--- a/extensions/fab_slaves_tradeware/md/factionlogic_stations.xml
++++ b/extensions/fab_slaves_tradeware/md/factionlogic_stations.xml
+@@ -1,69 +1,81 @@
+-<?xml version="1.0" encoding="utf-8"?>
+-<diff>
+-  <add sel="/mdscript/cues/library[@name='Manage_Stations']/cues/cue[@name='Process']/cues/cue[@name='Analyse_Stations']/actions/remove_value[@name='$StationDefinitions']" pos="before">
+-    <!-- Penal colony station management backstop. GOD stays active, but this keeps target counts stable in map-modded saves. -->
+-    <set_value name="$PrisonStationCount" exact="0"/>
+-    <set_value name="$DesiredPrisonStations" exact="0"/>
+-    <set_value name="$PrisonsToBuild" exact="0"/>
+-
+-    <do_if value="$Faction == faction.split">
+-      <set_value name="$DesiredPrisonStations" exact="2"/>
+-    </do_if>
+-    <do_elseif value="$Faction == faction.freesplit">
+-      <set_value name="$DesiredPrisonStations" exact="1"/>
+-    </do_elseif>
+-    <do_elseif value="$Faction == faction.scaleplate">
+-      <set_value name="$DesiredPrisonStations" exact="1"/>
+-    </do_elseif>
+-
+-    <do_if value="$DesiredPrisonStations gt 0">
+-      <find_station_by_true_owner name="$FactionStations_All" faction="$Faction" space="player.galaxy" multiple="true" checkoperational="false"/>
+-      <do_all exact="$FactionStations_All.count" counter="$ps_i">
+-        <set_value name="$Station" exact="$FactionStations_All.{$ps_i}"/>
+-        <set_value name="$HasPrisonModule" exact="false"/>
+-        <do_all exact="$Station.productions.count" counter="$pm_i">
+-          <do_if value="$Station.productions.{$pm_i}.macro == macro.prod_spl_strafkolonie_macro">
+-            <set_value name="$HasPrisonModule" exact="true"/>
+-            <break/>
+-          </do_if>
+-        </do_all>
+-        <do_if value="$HasPrisonModule">
+-          <set_value name="$PrisonStationCount" operation="add"/>
+-        </do_if>
+-      </do_all>
+-
+-      <do_if value="$PrisonStationCount lt $DesiredPrisonStations">
+-        <debug_text text="$DebugText + 'Has ' + $PrisonStationCount + ' penal colonies but desires ' + $DesiredPrisonStations" chance="$DebugChance" context="false"/>
+-        <set_value name="$PrisonsToBuild" exact="1" chance="10"/>
+-
+-        <do_if value="$PrisonsToBuild gt 0">
+-          <set_value name="$SpawnSectors" exact="[]"/>
+-          <find_sector name="$OwnedPrisonSectors" owner="$Faction" multiple="true"/>
+-          <do_if value="$OwnedPrisonSectors.count">
+-            <append_list_elements name="$SpawnSectors" other="$OwnedPrisonSectors"/>
+-          </do_if>
+-          <do_elseif value="$RelevantSectors.count">
+-            <append_list_elements name="$SpawnSectors" other="$RelevantSectors"/>
+-          </do_elseif>
+-
+-          <do_if value="$SpawnSectors.count">
+-            <set_value name="$ChosenSector" exact="$SpawnSectors.random"/>
+-            <include_actions ref="GetRandomCorePosition_1"/>
+-            <set_value name="$PrisonPlan" exact="if $Faction == faction.scaleplate then 'fab_sca_strafkolonie' else 'fab_spl_strafkolonie'"/>
+-            <set_value name="$PrisonName" exact="if $Faction == faction.scaleplate then {990100,4003} else if $Faction == faction.freesplit then {990100,4002} else {990100,4001}"/>
+-
+-            <create_station name="$NewPrison" sector="$ChosenSector" owner="$Faction" macro="macro.station_gen_factory_base_01_macro" rawname="$PrisonName" state="componentstate.operational" constructionplan="$PrisonPlan">
+-              <safepos value="$Position" allowyaxis="false" includeplotbox="true"/>
+-            </create_station>
+-
+-            <do_if value="$NewPrison">
+-              <signal_objects object="player.galaxy" param="'init station'" param2="$NewPrison" param3="false"/>
+-              <add_default_production_wares object="$NewPrison" lowerlimit="10" upperlimit="10"/>
+-              <debug_text text="$DebugText + 'Spawned penal colony ' + $NewPrison.knownname + ' in ' + $ChosenSector.knownname" chance="$DebugChance" context="false"/>
+-            </do_if>
+-          </do_if>
+-        </do_if>
+-      </do_if>
+-    </do_if>
+-  </add>
+-</diff>
++<?xml version="1.0" encoding="utf-8"?>
++<diff>
++  <add sel="/mdscript/cues/library[@name='Manage_Stations']/cues/cue[@name='Process']/cues/cue[@name='Analyse_Stations']/actions/remove_value[@name='$StationDefinitions']" pos="before">
++    <!-- Penal colony station management backstop. GOD stays active, but this keeps target counts stable in map-modded saves. -->
++    <set_value name="$PrisonStationCount" exact="0"/>
++    <set_value name="$DesiredPrisonStations" exact="0"/>
++    <set_value name="$PrisonsToBuild" exact="0"/>
++
++    <do_if value="$Faction == faction.split">
++      <set_value name="$DesiredPrisonStations" exact="2"/>
++    </do_if>
++    <do_elseif value="$Faction == faction.freesplit">
++      <set_value name="$DesiredPrisonStations" exact="1"/>
++    </do_elseif>
++    <do_elseif value="$Faction == faction.scaleplate">
++      <set_value name="$DesiredPrisonStations" exact="1"/>
++    </do_elseif>
++    <do_elseif value="faction.loanshark? and $Faction == faction.loanshark">
++      <set_value name="$DesiredPrisonStations" exact="1"/>
++    </do_elseif>
++    <do_elseif value="faction.yaki? and $Faction == faction.yaki">
++      <set_value name="$DesiredPrisonStations" exact="1"/>
++    </do_elseif>
++    <do_elseif value="faction.buccaneers? and $Faction == faction.buccaneers">
++      <set_value name="$DesiredPrisonStations" exact="1"/>
++    </do_elseif>
++    <do_elseif value="faction.fallensplit? and $Faction == faction.fallensplit">
++      <set_value name="$DesiredPrisonStations" exact="1"/>
++    </do_elseif>
++
++    <do_if value="$DesiredPrisonStations gt 0">
++      <find_station_by_true_owner name="$FactionStations_All" faction="$Faction" space="player.galaxy" multiple="true" checkoperational="false"/>
++      <do_all exact="$FactionStations_All.count" counter="$ps_i">
++        <set_value name="$Station" exact="$FactionStations_All.{$ps_i}"/>
++        <set_value name="$HasPrisonModule" exact="false"/>
++        <do_all exact="$Station.productions.count" counter="$pm_i">
++          <do_if value="$Station.productions.{$pm_i}.macro == macro.prod_spl_strafkolonie_macro">
++            <set_value name="$HasPrisonModule" exact="true"/>
++            <break/>
++          </do_if>
++        </do_all>
++        <do_if value="$HasPrisonModule">
++          <set_value name="$PrisonStationCount" operation="add"/>
++        </do_if>
++      </do_all>
++
++      <do_if value="$PrisonStationCount lt $DesiredPrisonStations">
++        <debug_text text="$DebugText + 'Has ' + $PrisonStationCount + ' penal colonies but desires ' + $DesiredPrisonStations" chance="$DebugChance" context="false"/>
++        <set_value name="$PrisonsToBuild" exact="1" chance="10"/>
++
++        <do_if value="$PrisonsToBuild gt 0">
++          <set_value name="$SpawnSectors" exact="[]"/>
++          <find_sector name="$OwnedPrisonSectors" owner="$Faction" multiple="true"/>
++          <do_if value="$OwnedPrisonSectors.count">
++            <append_list_elements name="$SpawnSectors" other="$OwnedPrisonSectors"/>
++          </do_if>
++          <do_elseif value="$RelevantSectors.count">
++            <append_list_elements name="$SpawnSectors" other="$RelevantSectors"/>
++          </do_elseif>
++
++          <do_if value="$SpawnSectors.count">
++            <set_value name="$ChosenSector" exact="$SpawnSectors.random"/>
++            <include_actions ref="GetRandomCorePosition_1"/>
++            <set_value name="$PrisonPlan" exact="if ($Faction == faction.scaleplate) or (faction.loanshark? and $Faction == faction.loanshark) or (faction.yaki? and $Faction == faction.yaki) or (faction.buccaneers? and $Faction == faction.buccaneers) then 'fab_sca_strafkolonie' else 'fab_spl_strafkolonie'"/>
++            <set_value name="$PrisonName" exact="if $Faction == faction.scaleplate then {990100,4003} else if $Faction == faction.freesplit then {990100,4002} else {990100,4001}"/>
++
++            <create_station name="$NewPrison" sector="$ChosenSector" owner="$Faction" macro="macro.station_gen_factory_base_01_macro" rawname="$PrisonName" state="componentstate.operational" constructionplan="$PrisonPlan">
++              <safepos value="$Position" allowyaxis="false" includeplotbox="true"/>
++            </create_station>
++
++            <do_if value="$NewPrison">
++              <signal_objects object="player.galaxy" param="'init station'" param2="$NewPrison" param3="false"/>
++              <add_default_production_wares object="$NewPrison" lowerlimit="10" upperlimit="10"/>
++              <debug_text text="$DebugText + 'Spawned penal colony ' + $NewPrison.knownname + ' in ' + $ChosenSector.knownname" chance="$DebugChance" context="false"/>
++            </do_if>
++          </do_if>
++        </do_if>
++      </do_if>
++    </do_if>
++  </add>
++</diff>
+
+diff --git a/extensions/fab_slaves_tradeware/md/slaves_prison_deadair_bridge.xml b/extensions/fab_slaves_tradeware/md/slaves_prison_deadair_bridge.xml
+--- a/extensions/fab_slaves_tradeware/md/slaves_prison_deadair_bridge.xml
++++ b/extensions/fab_slaves_tradeware/md/slaves_prison_deadair_bridge.xml
+@@ -1,0 +1,186 @@
++<?xml version="1.0" encoding="utf-8"?>
++<mdscript name="fab_slaves_prison_deadair_bridge">
++  <cues>
++
++    <cue name="DeadAirGodQuotaBridge" instantiate="true" checktime="5min" checkinterval="30min">
++      <actions>
++        <do_if value="md.$DADynamicVarTable? and md.$DADynamicVarTable.$DAGodFactionModuleQuotas?">
++          <set_value name="$DADVT" exact="md.$DADynamicVarTable"/>
++
++          <do_if value="$DADVT.$DAGodFactionModuleQuotas.{faction.split}?">
++            <get_module_definition macro="$SlavesModule" tags="[tag.production, tag.module]" faction="faction.split" race="faction.split.primaryrace" ware="ware.slaves"/>
++            <do_if value="$SlavesModule">
++              <do_if value="not $DADVT.$DAGodFactionModuleQuotas.{faction.split}.{ware.slaves}?">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.split}.{ware.slaves}" exact="[$SlavesModule,2]"/>
++              </do_if>
++              <do_elseif value="$DADVT.$DAGodFactionModuleQuotas.{faction.split}.{ware.slaves}.{2} lt 2">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.split}.{ware.slaves}.{2}" exact="2"/>
++              </do_elseif>
++            </do_if>
++            <remove_value name="$SlavesModule"/>
++          </do_if>
++
++          <do_if value="$DADVT.$DAGodFactionModuleQuotas.{faction.freesplit}?">
++            <get_module_definition macro="$SlavesModule" tags="[tag.production, tag.module]" faction="faction.freesplit" race="faction.freesplit.primaryrace" ware="ware.slaves"/>
++            <do_if value="$SlavesModule">
++              <do_if value="not $DADVT.$DAGodFactionModuleQuotas.{faction.freesplit}.{ware.slaves}?">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.freesplit}.{ware.slaves}" exact="[$SlavesModule,1]"/>
++              </do_if>
++              <do_elseif value="$DADVT.$DAGodFactionModuleQuotas.{faction.freesplit}.{ware.slaves}.{2} lt 1">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.freesplit}.{ware.slaves}.{2}" exact="1"/>
++              </do_elseif>
++            </do_if>
++            <remove_value name="$SlavesModule"/>
++          </do_if>
++
++          <do_if value="$DADVT.$DAGodFactionModuleQuotas.{faction.scaleplate}?">
++            <get_module_definition macro="$SlavesModule" tags="[tag.production, tag.module]" faction="faction.scaleplate" race="faction.scaleplate.primaryrace" ware="ware.slaves"/>
++            <do_if value="$SlavesModule">
++              <do_if value="not $DADVT.$DAGodFactionModuleQuotas.{faction.scaleplate}.{ware.slaves}?">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.scaleplate}.{ware.slaves}" exact="[$SlavesModule,1]"/>
++              </do_if>
++              <do_elseif value="$DADVT.$DAGodFactionModuleQuotas.{faction.scaleplate}.{ware.slaves}.{2} lt 1">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.scaleplate}.{ware.slaves}.{2}" exact="1"/>
++              </do_elseif>
++            </do_if>
++            <remove_value name="$SlavesModule"/>
++          </do_if>
++
++          <do_if value="faction.loanshark? and $DADVT.$DAGodFactionModuleQuotas.{faction.loanshark}?">
++            <get_module_definition macro="$SlavesModule" tags="[tag.production, tag.module]" faction="faction.loanshark" race="faction.loanshark.primaryrace" ware="ware.slaves"/>
++            <do_if value="$SlavesModule">
++              <do_if value="not $DADVT.$DAGodFactionModuleQuotas.{faction.loanshark}.{ware.slaves}?">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.loanshark}.{ware.slaves}" exact="[$SlavesModule,1]"/>
++              </do_if>
++              <do_elseif value="$DADVT.$DAGodFactionModuleQuotas.{faction.loanshark}.{ware.slaves}.{2} lt 1">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.loanshark}.{ware.slaves}.{2}" exact="1"/>
++              </do_elseif>
++            </do_if>
++            <remove_value name="$SlavesModule"/>
++          </do_if>
++
++          <do_if value="faction.yaki? and $DADVT.$DAGodFactionModuleQuotas.{faction.yaki}?">
++            <get_module_definition macro="$SlavesModule" tags="[tag.production, tag.module]" faction="faction.yaki" race="faction.yaki.primaryrace" ware="ware.slaves"/>
++            <do_if value="$SlavesModule">
++              <do_if value="not $DADVT.$DAGodFactionModuleQuotas.{faction.yaki}.{ware.slaves}?">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.yaki}.{ware.slaves}" exact="[$SlavesModule,1]"/>
++              </do_if>
++              <do_elseif value="$DADVT.$DAGodFactionModuleQuotas.{faction.yaki}.{ware.slaves}.{2} lt 1">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.yaki}.{ware.slaves}.{2}" exact="1"/>
++              </do_elseif>
++            </do_if>
++            <remove_value name="$SlavesModule"/>
++          </do_if>
++
++          <do_if value="faction.buccaneers? and $DADVT.$DAGodFactionModuleQuotas.{faction.buccaneers}?">
++            <get_module_definition macro="$SlavesModule" tags="[tag.production, tag.module]" faction="faction.buccaneers" race="faction.buccaneers.primaryrace" ware="ware.slaves"/>
++            <do_if value="$SlavesModule">
++              <do_if value="not $DADVT.$DAGodFactionModuleQuotas.{faction.buccaneers}.{ware.slaves}?">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.buccaneers}.{ware.slaves}" exact="[$SlavesModule,1]"/>
++              </do_if>
++              <do_elseif value="$DADVT.$DAGodFactionModuleQuotas.{faction.buccaneers}.{ware.slaves}.{2} lt 1">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.buccaneers}.{ware.slaves}.{2}" exact="1"/>
++              </do_elseif>
++            </do_if>
++            <remove_value name="$SlavesModule"/>
++          </do_if>
++
++          <do_if value="faction.fallensplit? and $DADVT.$DAGodFactionModuleQuotas.{faction.fallensplit}?">
++            <get_module_definition macro="$SlavesModule" tags="[tag.production, tag.module]" faction="faction.fallensplit" race="faction.fallensplit.primaryrace" ware="ware.slaves"/>
++            <do_if value="$SlavesModule">
++              <do_if value="not $DADVT.$DAGodFactionModuleQuotas.{faction.fallensplit}.{ware.slaves}?">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.fallensplit}.{ware.slaves}" exact="[$SlavesModule,1]"/>
++              </do_if>
++              <do_elseif value="$DADVT.$DAGodFactionModuleQuotas.{faction.fallensplit}.{ware.slaves}.{2} lt 1">
++                <set_value name="$DADVT.$DAGodFactionModuleQuotas.{faction.fallensplit}.{ware.slaves}.{2}" exact="1"/>
++              </do_elseif>
++            </do_if>
++            <remove_value name="$SlavesModule"/>
++          </do_if>
++        </do_if>
++      </actions>
++    </cue>
++
++    <cue name="PrisonBuildBackstop" instantiate="true" checktime="45min" checkinterval="90min">
++      <actions>
++        <set_value name="$PrisonFactionList" exact="[faction.scaleplate, faction.split, faction.freesplit]"/>
++        <do_if value="faction.loanshark?">
++          <append_to_list name="$PrisonFactionList" exact="faction.loanshark"/>
++        </do_if>
++        <do_if value="faction.yaki?">
++          <append_to_list name="$PrisonFactionList" exact="faction.yaki"/>
++        </do_if>
++        <do_if value="faction.buccaneers?">
++          <append_to_list name="$PrisonFactionList" exact="faction.buccaneers"/>
++        </do_if>
++        <do_if value="faction.fallensplit?">
++          <append_to_list name="$PrisonFactionList" exact="faction.fallensplit"/>
++        </do_if>
++
++        <shuffle_list list="$PrisonFactionList"/>
++        <set_value name="$CreatedThisPass" exact="false"/>
++
++        <do_all exact="$PrisonFactionList.count" counter="$pf_i">
++          <do_if value="not $CreatedThisPass">
++            <set_value name="$PrisonFaction" exact="$PrisonFactionList.{$pf_i}"/>
++
++            <do_if value="$PrisonFaction.isactive">
++              <set_value name="$DesiredPrisonStations" exact="1"/>
++              <do_if value="$PrisonFaction == faction.split">
++                <set_value name="$DesiredPrisonStations" exact="2"/>
++              </do_if>
++
++              <set_value name="$PrisonStationCount" exact="0"/>
++              <find_station_by_true_owner name="$FactionStations_All" faction="$PrisonFaction" space="player.galaxy" multiple="true" checkoperational="false"/>
++              <do_all exact="$FactionStations_All.count" counter="$ps_i">
++                <set_value name="$Station" exact="$FactionStations_All.{$ps_i}"/>
++                <set_value name="$HasPrisonModule" exact="false"/>
++                <do_all exact="$Station.productions.count" counter="$pm_i">
++                  <do_if value="$Station.productions.{$pm_i}.macro == macro.prod_spl_strafkolonie_macro">
++                    <set_value name="$HasPrisonModule" exact="true"/>
++                    <break/>
++                  </do_if>
++                </do_all>
++                <do_if value="$HasPrisonModule">
++                  <set_value name="$PrisonStationCount" operation="add"/>
++                </do_if>
++              </do_all>
++
++              <do_if value="$PrisonStationCount lt $DesiredPrisonStations">
++                <set_value name="$SpawnSectors" exact="[]"/>
++                <find_sector name="$OwnedPrisonSectors" owner="$PrisonFaction" multiple="true"/>
++                <do_if value="$OwnedPrisonSectors.count">
++                  <append_list_elements name="$SpawnSectors" other="$OwnedPrisonSectors"/>
++                </do_if>
++                <do_if value="not $SpawnSectors.count">
++                  <do_all exact="$FactionStations_All.count" counter="$fs_i">
++                    <do_if value="$FactionStations_All.{$fs_i}.exists and $FactionStations_All.{$fs_i}.sector">
++                      <append_to_list name="$SpawnSectors" exact="$FactionStations_All.{$fs_i}.sector"/>
++                    </do_if>
++                  </do_all>
++                </do_if>
++
++                <do_if value="$SpawnSectors.count">
++                  <set_value name="$ChosenSector" exact="$SpawnSectors.random"/>
++                  <set_value name="$PrisonPlan" exact="if ($PrisonFaction == faction.scaleplate) or (faction.loanshark? and $PrisonFaction == faction.loanshark) or (faction.yaki? and $PrisonFaction == faction.yaki) or (faction.buccaneers? and $PrisonFaction == faction.buccaneers) then 'fab_sca_strafkolonie' else 'fab_spl_strafkolonie'"/>
++                  <set_value name="$PrisonName" exact="if $PrisonFaction == faction.scaleplate then {990100,4003} else if $PrisonFaction == faction.freesplit then {990100,4002} else {990100,4001}"/>
++
++                  <create_station name="$NewPrison" sector="$ChosenSector" owner="$PrisonFaction" macro="macro.station_gen_factory_base_01_macro" rawname="$PrisonName" state="componentstate.operational" constructionplan="$PrisonPlan">
++                    <safepos allowyaxis="false" includeplotbox="true"/>
++                  </create_station>
++
++                  <do_if value="$NewPrison">
++                    <signal_objects object="player.galaxy" param="'init station'" param2="$NewPrison" param3="false"/>
++                    <add_default_production_wares object="$NewPrison" lowerlimit="10" upperlimit="10"/>
++                    <set_value name="$CreatedThisPass" exact="true"/>
++                  </do_if>
++                </do_if>
++              </do_if>
++            </do_if>
++          </do_if>
++        </do_all>
++      </actions>
++    </cue>
++
++  </cues>
++</mdscript>
+

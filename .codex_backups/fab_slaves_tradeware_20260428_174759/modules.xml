@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<diff>
+  <add sel="/modules/module[last()]" pos="after">
+    <module id="prod_spl_strafkolonie_split" group="prod_spl_strafkolonie">
+      <category ware="slaves" tags="[production, module]" race="split" faction="[split, freesplit, court]" />
+      <compatibilities>
+        <production ware="slaves" chance="100" />
+      </compatibilities>
+    </module>
+    <module id="prod_spl_strafkolonie_teladi" group="prod_spl_strafkolonie">
+      <category ware="slaves" tags="[production, module]" race="teladi" faction="[teladi, ministry, scaleplate]" />
+      <compatibilities>
+        <production ware="slaves" chance="100" />
+      </compatibilities>
+    </module>
+  </add>
+</diff>
