@@ -1,8 +1,0 @@
-{
-	"name": "gnn_core",
-	"library": "native\\x4native_gnn_core.dll",
-	"priority": 100,
-	"min_api_version": 1,
-	"autoreload": true,
-	"logfile": "gnn_core.log"
-}

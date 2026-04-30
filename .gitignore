@@ -1,0 +1,31 @@
+# Build artifacts (CMake / MSVC)
+build/
+out/
+*.obj
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.recipe
+*.dll
+*.exe
+
+# Logs
+*.log
+gnn/
+
+# Backup / scratch folders
+.codex_backups/
+.claude/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.bak
+*.tmp
+*~
+
+# OS
+Thumbs.db
+.DS_Store

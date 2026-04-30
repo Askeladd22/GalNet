@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <content id="GalNet" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia"  author="Askeladd" version="110" date="2026-04-14" save="0" enabled="1">
-	<dependency id="x4native" optional="false" />
 	<dependency id="ws_2042901274" optional="true" name="SirNukes Mod Support APIs" />
 	<dependency id="kuerteeUIExtensionsAndHUD" optional="true" name="kuertee UI Extensions and HUD" />
 	<text language="7" name="Galaxy News Network" description="Notizie generate dinamicamente in base alle attivita in corso nella galassia" author="Askeladd" />
